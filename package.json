@@ -1,0 +1,19 @@
+{
+  "name": "cocopo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run rbuild & npm run mbuild",
+    "rbuild": "tsc --project src/render",
+    "mbuild": "tsc --project src/main",
+    "start": "electron App",
+    "release": "electron-packager App CocoPo --platform=win32 --arch=x64 --electron-version 1.6.6 --icon=icon.ico --overwrite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hiroki",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/electron": "^1.4.33"
+  }
+}
