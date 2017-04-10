@@ -42,3 +42,4 @@ CocoPo/App/*
 tmp/
 
 *.txt
+*.sublime-workspace
