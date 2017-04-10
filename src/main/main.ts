@@ -33,10 +33,10 @@ class Main
 				data.css = 'Default';
 				//return Promise.resolve( data );
 			}
+
 			// Load style.
 			return this.loadFile( path.join( App.getPath( 'userData' ), 'style', data.css, 'style.css' ) ).then( ( style ) =>
 			{
-console.log('style:',style);
 				this.style = style;
 				return Promise.resolve( data );
 			} ).catch( () =>
@@ -71,7 +71,6 @@ console.log('style:',style);
 
 		this.msg.set( 'css', ( event, data ) =>
 		{
-console.log('css', this.style);
 			event.sender.send( 'asynchronous-reply', { type: 'css', data: this.style } );
 		} );
 
@@ -117,7 +116,6 @@ console.log('css', this.style);
 		Menu.setApplicationMenu(menu);
 		*/
 	}
-
 
 	private createTasktray()
 	{
@@ -176,7 +174,9 @@ console.log('css', this.style);
 			{
 			}
 			return Promise.reject( {} );
-		} ).catch( ( e ) => {
+		} ).catch( ( e ) =>
+		{
+			// Init config & Default style.
 			const p =
 			[
 				this.initDefaultStyle().catch( () => { return Promise.resolve( {} ); } ),
