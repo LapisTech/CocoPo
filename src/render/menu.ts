@@ -7,7 +7,7 @@ class InMenu
 	constructor( msg: Message )
 	{
 		this.menu = new electron.remote.Menu();
-		this.addItem( 'Devtool', () => { msg.send( 'exit', {} ); } );
+		this.addItem( 'Devtool', () => { this.devtool(); } );
 		this.menu.append( new electron.remote.MenuItem( { type: 'separator' } ) );
 		this.addItem( 'Exit', () => { msg.send( 'exit', {} ); } );
 	}

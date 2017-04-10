@@ -1,69 +1,224 @@
 import * as electron from 'electron';
+import * as fs       from 'fs';
+import * as path     from 'path';
+
 const App           = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 const Tray          = electron.Tray;
 const Menu          = electron.Menu;
 const IpcMain       = electron.ipcMain;
 
-let win: Electron.BrowserWindow;
-
 console.log( process.versions );
+console.log( App.getPath( 'userData' ) );
 
-function createWindow()
+interface Config
 {
-	win = new BrowserWindow(
+	css?: string,
+}
+
+class Main
+{
+	private msg: Message;
+	private win: Electron.BrowserWindow;
+	private tray: Electron.Tray;
+	private conf: Config = {};
+	private style: string = '';
+
+	public init()
 	{
-		width: 250,
-		height: 480,
-		frame: true,
-		resizable: true,
-		//nodeIntegration: false,
-		//transparent: true,
-		//alwaysOnTop: true,
-		skipTaskbar: true,
-	} );
+		this.loadConfig().then( ( data: Config ) =>
+		{
+			if ( !data.css )
+			{
+				data.css = 'Default';
+				//return Promise.resolve( data );
+			}
+			// Load style.
+			return this.loadFile( path.join( App.getPath( 'userData' ), 'style', data.css, 'style.css' ) ).then( ( style ) =>
+			{
+console.log('style:',style);
+				this.style = style;
+				return Promise.resolve( data );
+			} ).catch( () =>
+			{
+				return Promise.resolve( this.conf );
+			} );
+		} ).then( ( conf ) =>
+		{
+			this.conf = conf;
+			this.setMessage();
+			this.createWindow();
+			this.createTasktray();
+		} );
+	}
 
-	win.setSkipTaskbar( true );
+	public existWindow(): boolean { return !!this.win; }
 
-	win.setMenuBarVisibility( false );
-
-	win.loadURL( 'file://' + __dirname + '/index.html' );
-
-	win.on( 'closed', () =>
+	private setMessage()
 	{
-		//win = null;
-	} );
-	/*
-	let menu = Menu.buildFromTemplate([
+		this.msg = new Message();
+
+		this.msg.set( 'resize', ( event, data ) =>
+		{
+			if ( !data || typeof data !== 'object' )
+			{
+				event.sender.send( 'asynchronous-reply', { type: 'resixe', data: 'ng' } );
+				return;
+			}
+			this.win.setSize( data.width || 100, data.height || 180, false );
+			event.sender.send( 'asynchronous-reply', { type: 'resixe', data: 'ok' } );
+		} );
+
+		this.msg.set( 'css', ( event, data ) =>
+		{
+console.log('css', this.style);
+			event.sender.send( 'asynchronous-reply', { type: 'css', data: this.style } );
+		} );
+
+		this.msg.set( 'exit', ( event, data ) =>
+		{
+			this.win.close();
+		} );
+	}
+
+	private createWindow()
+	{
+		this.win = new BrowserWindow(
+		{
+			width: 250,
+			height: 480,
+			frame: true,
+			resizable: true,
+			//nodeIntegration: false,
+			//transparent: true,
+			//alwaysOnTop: true,
+			skipTaskbar: true,
+		} );
+
+		//win.setSkipTaskbar( true );
+
+		this.win.setMenuBarVisibility( false );
+
+		this.win.loadURL( 'file://' + __dirname + '/index.html' );
+
+		this.win.on( 'closed', () =>
+		{
+			//win = null;
+		} );
+
+		/*
+		let menu = Menu.buildFromTemplate([
 		{
 			label: 'Setting',
 			click: function () {
 				console.log("hoge");
 			}
-		}
-	]);
-	Menu.setApplicationMenu(menu);
-	*/
+		} ]);
+		Menu.setApplicationMenu(menu);
+		*/
+	}
 
-	createTasktray();
-};
 
-function createTasktray()
-{
-	const trayIcon = new Tray( electron.nativeImage.createFromPath( __dirname + '/trayicon.png' ) );
+	private createTasktray()
+	{
+		this.tray = new Tray( electron.nativeImage.createFromPath( __dirname + '/trayicon.png' ) );
 
-	const contextMenu = Menu.buildFromTemplate(
-	[
-		{ label: 'Open', click: () => { win.focus(); } },
-		{ label: 'Reset position', click: () => { win.center(); } },
-		{ label: 'Exit', click: () => { win.close(); } },
-	] );
+		const contextMenu = Menu.buildFromTemplate(
+		[
+			{ label: 'Open', click: () => { this.win.focus(); } },
+			{ label: 'Reset position', click: () => { this.win.center(); } },
+			{ label: 'Exit', click: () => { this.win.close(); } },
+		] );
 
-	trayIcon.setContextMenu( contextMenu );
+		this.tray.setContextMenu( contextMenu );
 
-	trayIcon.setToolTip( App.getName() );
+		this.tray.setToolTip( App.getName() );
 
-	trayIcon.on( 'clicked', () => { win.focus(); } );
+		this.tray.on( 'clicked', () => { this.win.focus(); } );
+	}
+
+	private loadFile( file: string ): Promise<string>
+	{
+		return new Promise( ( resolve, reject ) =>
+		{
+			fs.readFile( file, 'utf8', ( error, data ) =>
+			{
+				if ( error ) { return reject( error ); }
+				resolve( data );
+			} );
+		} );
+	}
+
+	private saveFile( file: string, data: string )
+	{
+		return new Promise( ( resolve, reject ) =>
+		{
+			fs.writeFile( file, data, ( error ) =>
+			{
+				if ( error ) { return reject( error ); }
+				resolve( {} );
+			} );
+		} );
+	}
+
+	private loadConfig(): Promise<Config>
+	{
+		return this.loadFile( path.join( App.getPath( 'userData' ), 'config.json' ) ).then( ( data ) =>
+		{
+			try
+			{
+				const conf = JSON.parse( data );
+				if ( conf )
+				{
+					return Promise.resolve( <Config>conf );
+				}
+			}catch( e )
+			{
+			}
+			return Promise.reject( {} );
+		} ).catch( ( e ) => {
+			const p =
+			[
+				this.initDefaultStyle().catch( () => { return Promise.resolve( {} ); } ),
+				this.saveConfig().catch( () => { return Promise.resolve( {} ); } ),
+			];
+			return Promise.all( p ).then( () =>
+			{
+				return Promise.resolve( <Config>{} );
+			} );
+		} );
+	}
+
+	private saveConfig()
+	{
+		const conf = this.conf;
+		return this.saveFile( path.join( App.getPath( 'userData' ), 'config.json' ), JSON.stringify( conf ) );
+	}
+
+	private makeDirectory( dir: string )
+	{
+		return new Promise( ( resolve, reject ) =>
+		{
+			fs.mkdir( dir, ( error: NodeJS.ErrnoException ) =>
+			{
+				if ( error && error.code !== 'EEXIST' ) { return reject( { error: error } ); }
+				resolve( { exsists: !!error } );
+			} );
+		} );
+	}
+
+	private initDefaultStyle()
+	{
+		const sdir = path.join( App.getPath( 'userData' ), 'style' );
+		return this.makeDirectory( sdir ).then( () =>
+		{
+			const dir = path.join( sdir, 'Default' );
+			return this.makeDirectory( dir ).then( () =>
+			{
+				return this.saveFile( path.join( dir, 'style.css' ), this.style );
+			} );
+		} );
+	}
 }
 
 class Message
@@ -101,26 +256,14 @@ class Message
 // Start                                    //
 // ======================================== //
 
-const msg = new Message();
+const main = new Main();
 
-msg.set( 'resize', ( event, data ) =>
+function init()
 {
-	if ( !data || typeof data !== 'object' )
-	{
-		event.sender.send( 'asynchronous-reply', { type: 'resixe', data: 'ng' } );
-		return;
-	}
-	win.setSize( data.width || 100, data.height || 180, false );
-	event.sender.send( 'asynchronous-reply', { type: 'resixe', data: 'ok' } );
-} );
+	main.init();
+}
 
-msg.set( 'exit', ( event, data ) =>
-{
-	console.log("close");
-	win.close();
-} );
-
-App.on( 'ready', createWindow );
+App.on( 'ready', init );
 
 App.on( 'window-all-closed', () =>
 {
@@ -132,5 +275,5 @@ App.on( 'window-all-closed', () =>
 
 App.on( 'activate', () =>
 {
-	if ( !win ) { createWindow(); }
+	if ( !main.existWindow() ) { init(); }
 } );

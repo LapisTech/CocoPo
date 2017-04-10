@@ -16,8 +16,8 @@ class Main {
         webview.addEventListener('dom-ready', () => {
             const wb = webview;
             this.updateURLBar(wb.src);
-            webview.addEventListener('did-start-loading', (e) => {
-                const url = wb.src;
+            webview.addEventListener('did-navigate-in-page', (e) => {
+                const url = e.url;
                 if (this.isTwitterURL(url)) {
                     this.updateURLBar(url);
                 }
@@ -26,15 +26,17 @@ class Main {
                     this.openURL(url);
                 }
             });
-            webview.insertCSS(`html{font-size:10px;}
-`);
+            this.msg.send('css', {});
+        });
+        this.msg.set('css', (event, data) => {
+            webview.insertCSS(data);
         });
     }
     isTwitterURL(url) {
         return url.match(/^https+:\/\/[^\/]*\.twitter.com\//) !== null;
     }
     openURL(url) {
-        require('shell').openExternal(url);
+        electron.shell.openExternal(url);
     }
     updateURLBar(url) {
         this.url.value = url;
@@ -55,7 +57,7 @@ const electron = require('electron');
 class InMenu {
     constructor(msg) {
         this.menu = new electron.remote.Menu();
-        this.addItem('Devtool', () => { msg.send('exit', {}); });
+        this.addItem('Devtool', () => { this.devtool(); });
         this.menu.append(new electron.remote.MenuItem({ type: 'separator' }));
         this.addItem('Exit', () => { msg.send('exit', {}); });
     }
