@@ -18,31 +18,42 @@ Node.jsはWindowsならNodist、Linux/UNIX系OSならnvmをインストールし
 
 一応開発者は7以降を使っています。
 
-### 開発に必要なモジュールのインストール
+### 開発に必要な環境のインストール
 
 TypeScriptとElectronはグローバルな領域にインストールします。
+
+TypeScriptは2.2以上を使っています。
 
 ```
 npm -g i typescript
 npm -g i electron
 npm -g i electron-packager
 npm -g i electron-prebuilt
+```
+
+### 開発に必要なモジュールのインストール
+
+なんと、型定義ファイルしかインストールしていません。
+
+```
 npm i
 ```
 
-## Build
+## ビルド
 
 ```
 npm run build
 ```
 
-## Run
+## 実行
 
 ```
 npm run start
 ```
 
-## Release build
+## リリースビルド
+
+X64のWindows向けのビルドが走ります。Mac？知らない子ですね。
 
 ```
 npm run release
@@ -92,6 +103,7 @@ Twitter外へのリンクはブラウザで開きます。
 
 ## 追加予定の機能
 
+* 設定画面の作成
 * ウィンドウの位置やサイズの保存
 * ユーザー固有テーマの編集
 * 固定フレーム化
