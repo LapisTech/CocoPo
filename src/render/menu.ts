@@ -1,12 +1,29 @@
 const electron = require( 'electron' );
 
-class InMenu
+class MenuClass
 {
-	private menu: Electron.Menu;
+	protected menu: Electron.Menu;
 
-	constructor( msg: Message )
+	constructor()
 	{
 		this.menu = new electron.remote.Menu();
+	}
+
+	public addItem( label: string, click: () => void )
+	{
+		this.menu.append( new electron.remote.MenuItem( { label: label, click: click } ) );
+	}
+
+	public open()
+	{
+		this.menu.popup( electron.remote.getCurrentWindow() );
+	}
+}
+
+class InMenu extends MenuClass
+{
+	public init( msg: Message )
+	{
 		this.addItem( 'Devtool', () => { this.devtool(); } );
 		this.menu.append( new electron.remote.MenuItem( { type: 'separator' } ) );
 		this.addItem( 'Exit', () => { msg.send( 'exit', {} ); } );
@@ -21,9 +38,33 @@ class InMenu
 	{
 		(<any>document.getElementById('webview')).openDevTools();
 	}
+}
 
-	public open()
+class UrlMenu extends MenuClass
+{
+	private url: HTMLInputElement;
+
+	public init( url: HTMLInputElement )
 	{
-		this.menu.popup( electron.remote.getCurrentWindow() );
+		this.url = url;
+		this.addItem( 'Copy', () => { this.copy(); } );
+
+		url.addEventListener( 'mousedown', ( e ) =>
+		{
+			switch ( e.button )
+			{
+				//case 0: // Left
+				case 1: // Middle
+					break;
+				case 2: // Right
+					return this.open();
+			}
+		}, false );
+	}
+
+	public copy()
+	{
+		//this.menu.popup( electron.remote.getCurrentWindow() );
+		electron.clipboard.writeText( this.url.value );
 	}
 }

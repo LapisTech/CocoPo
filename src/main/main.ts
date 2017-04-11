@@ -1,19 +1,21 @@
 import * as electron from 'electron';
 import * as fs       from 'fs';
 import * as path     from 'path';
+const PackageInfo = require( './package.json' );
 
 const App           = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 const Tray          = electron.Tray;
 const Menu          = electron.Menu;
 const IpcMain       = electron.ipcMain;
+const Dialog        = electron.dialog;
 
 console.log( process.versions );
 console.log( App.getPath( 'userData' ) );
 
 interface Config
 {
-	css?: string,
+	theme?: string,
 }
 
 class Main
@@ -22,26 +24,37 @@ class Main
 	private win: Electron.BrowserWindow;
 	private tray: Electron.Tray;
 	private conf: Config = {};
-	private style: string = '';
+	private style: string = '@media screen and (max-width: 300px){html{font-size:10px !important;}}';
+	private theme: string = '';
 
 	public init()
 	{
 		this.loadConfig().then( ( data: Config ) =>
 		{
-			if ( !data.css )
+			if ( !data.theme )
 			{
-				data.css = 'Default';
+				data.theme = 'Default';
 				//return Promise.resolve( data );
 			}
 
-			// Load style.
-			return this.loadFile( path.join( App.getPath( 'userData' ), 'style', data.css, 'style.css' ) ).then( ( style ) =>
+			// Load theme & style.
+			const p =
+			[
+				this.loadFile( path.join( App.getPath( 'userData' ), 'theme', data.theme, 'style.css' ) ).then( ( style ) =>
+				{
+					this.style = style;
+					return Promise.resolve( {} );
+				} ).catch( () => { return Promise.resolve( {} ); } ),
+				this.loadFile( path.join( App.getPath( 'userData' ), 'theme', data.theme, 'theme.css' ) ).then( ( style ) =>
+				{
+					this.theme = style;
+					return Promise.resolve( {} );
+				} ).catch( () => { return Promise.resolve( {} ); } ),
+			];
+
+			return Promise.all( p ).then( () =>
 			{
-				this.style = style;
 				return Promise.resolve( data );
-			} ).catch( () =>
-			{
-				return Promise.resolve( this.conf );
 			} );
 		} ).then( ( conf ) =>
 		{
@@ -69,9 +82,12 @@ class Main
 			event.sender.send( 'asynchronous-reply', { type: 'resixe', data: 'ok' } );
 		} );
 
-		this.msg.set( 'css', ( event, data ) =>
+		this.msg.set( 'theme', ( event, data ) =>
 		{
-			event.sender.send( 'asynchronous-reply', { type: 'css', data: this.style } );
+			event.sender.send( 'asynchronous-reply', {
+				type: 'theme',
+				data: { css: this.style, theme: this.theme }
+			} );
 		} );
 
 		this.msg.set( 'exit', ( event, data ) =>
@@ -120,11 +136,13 @@ class Main
 	private createTasktray()
 	{
 		this.tray = new Tray( electron.nativeImage.createFromPath( __dirname + '/trayicon.png' ) );
+		this.tray.setToolTip( 'CocoPo' );
 
 		const contextMenu = Menu.buildFromTemplate(
 		[
 			{ label: 'Open', click: () => { this.win.focus(); } },
 			{ label: 'Reset position', click: () => { this.win.center(); } },
+			{ label: 'About', click: () => { this.about(); } },
 			{ label: 'Exit', click: () => { this.win.close(); } },
 		] );
 
@@ -132,7 +150,7 @@ class Main
 
 		this.tray.setToolTip( App.getName() );
 
-		this.tray.on( 'clicked', () => { this.win.focus(); } );
+		this.tray.on( 'click', () => { this.win.focus(); } );
 	}
 
 	private loadFile( file: string ): Promise<string>
@@ -179,7 +197,7 @@ class Main
 			// Init config & Default style.
 			const p =
 			[
-				this.initDefaultStyle().catch( () => { return Promise.resolve( {} ); } ),
+				this.initDefaultTheme().catch( () => { return Promise.resolve( {} ); } ),
 				this.saveConfig().catch( () => { return Promise.resolve( {} ); } ),
 			];
 			return Promise.all( p ).then( () =>
@@ -207,16 +225,49 @@ class Main
 		} );
 	}
 
-	private initDefaultStyle()
+	private initDefaultTheme()
 	{
-		const sdir = path.join( App.getPath( 'userData' ), 'style' );
+		const sdir = path.join( App.getPath( 'userData' ), 'theme' );
 		return this.makeDirectory( sdir ).then( () =>
 		{
 			const dir = path.join( sdir, 'Default' );
 			return this.makeDirectory( dir ).then( () =>
 			{
-				return this.saveFile( path.join( dir, 'style.css' ), this.style );
+				const p =
+				[
+					this.saveFile( path.join( dir, 'style.css' ), this.style ),
+					this.saveFile( path.join( dir, 'theme.css' ), '' ),
+				];
+				return Promise.all( p );
 			} );
+		} );
+	}
+
+	private about()
+	{
+		const list: { name: string, value: string }[] =
+		[
+			{ name: 'Official Site', value: PackageInfo.site },
+			{ name: 'Author', value: PackageInfo.author },
+			{ name: PackageInfo.appname, value: PackageInfo.version },
+			{ name: 'Electron', value: process.versions.electron },
+			{ name: 'Node.js', value: process.versions.node },
+			{ name: 'Chrome', value: process.versions.chrome },
+			{ name: 'V8', value: process.versions.v8 },
+		];
+		Dialog.showMessageBox( this.win,
+		{
+			title: 'About',
+			buttons: [ 'Site', 'OK' ],
+			message: PackageInfo.appname + ' versions.',
+			detail: list.map( ( v ) => { return [ v.name, v.value ].join( ': ' ) } ).join( "\n" ),
+		}, ( res ) =>
+		{
+			if ( res === 0 )
+			{
+				// Open site.
+				electron.shell.openExternal( PackageInfo.site );
+			}
 		} );
 	}
 }

@@ -2,20 +2,25 @@ class Main
 {
 	private msg: Message;
 	private menu: InMenu;
+	private umenu: UrlMenu;
 	private url: HTMLInputElement;
 
 	constructor()
 	{
-
 	}
 
 	public init()
 	{
 		this.msg = new Message();
-		this.menu = new InMenu( this.msg );
+		this.menu = new InMenu();
+		this.umenu = new UrlMenu();
 
 		const url = document.getElementById( 'url' );
 		if ( url ) { this.url = <HTMLInputElement>url; }
+
+		this.menu.init( this.msg );
+		this.umenu.init( this.url );
+
 		const webview = document.getElementById('webview');
 		if ( !webview ){ return; }
 		webview.addEventListener( 'new-window', ( e ) => { this.openURL( (<any>e).url ); });
@@ -55,12 +60,19 @@ class Main
 			webview.addEventListener( '', ( e ) =>{console.log('',e);});*/
 
 
-			this.msg.send( 'css', {} );
+			this.msg.send( 'theme', {} );
 		} );
 
-		this.msg.set( 'css', ( event, data ) =>
+		this.msg.set( 'theme', ( event, data ) =>
 		{
-			(<any>webview).insertCSS( data );
+			(<any>webview).insertCSS( data.css );
+			const theme = <HTMLStyleElement>document.getElementById( 'theme' );
+			if ( !theme ) { return; }
+			for ( let child = theme.lastChild ; child ; child = theme.lastChild )
+			{
+				theme.removeChild( child );
+			}
+			theme.appendChild( document.createTextNode( data.theme ) );
 		} );
 	}
 
@@ -82,6 +94,11 @@ class Main
 	public mainMenu()
 	{
 		this.menu.open();
+	}
+
+	public urlMenu()
+	{
+		this.umenu.open();
 	}
 }
 

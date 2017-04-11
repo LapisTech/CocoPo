@@ -1,5 +1,7 @@
 {
   "name": "cocopo",
+  "appname": "CocoPo",
+  "site": "http://lapis.tech/CocoPo/",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",

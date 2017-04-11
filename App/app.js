@@ -3,11 +3,14 @@ class Main {
     }
     init() {
         this.msg = new Message();
-        this.menu = new InMenu(this.msg);
+        this.menu = new InMenu();
+        this.umenu = new UrlMenu();
         const url = document.getElementById('url');
         if (url) {
             this.url = url;
         }
+        this.menu.init(this.msg);
+        this.umenu.init(this.url);
         const webview = document.getElementById('webview');
         if (!webview) {
             return;
@@ -26,10 +29,18 @@ class Main {
                     this.openURL(url);
                 }
             });
-            this.msg.send('css', {});
+            this.msg.send('theme', {});
         });
-        this.msg.set('css', (event, data) => {
-            webview.insertCSS(data);
+        this.msg.set('theme', (event, data) => {
+            webview.insertCSS(data.css);
+            const theme = document.getElementById('theme');
+            if (!theme) {
+                return;
+            }
+            for (let child = theme.lastChild; child; child = theme.lastChild) {
+                theme.removeChild(child);
+            }
+            theme.appendChild(document.createTextNode(data.theme));
         });
     }
     isTwitterURL(url) {
@@ -44,6 +55,9 @@ class Main {
     mainMenu() {
         this.menu.open();
     }
+    urlMenu() {
+        this.umenu.open();
+    }
 }
 const main = new Main();
 window.addEventListener('contextmenu', (e) => {
@@ -54,9 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
     main.init();
 }, false);
 const electron = require('electron');
-class InMenu {
-    constructor(msg) {
+class MenuClass {
+    constructor() {
         this.menu = new electron.remote.Menu();
+    }
+    addItem(label, click) {
+        this.menu.append(new electron.remote.MenuItem({ label: label, click: click }));
+    }
+    open() {
+        this.menu.popup(electron.remote.getCurrentWindow());
+    }
+}
+class InMenu extends MenuClass {
+    init(msg) {
         this.addItem('Devtool', () => { this.devtool(); });
         this.menu.append(new electron.remote.MenuItem({ type: 'separator' }));
         this.addItem('Exit', () => { msg.send('exit', {}); });
@@ -67,8 +91,22 @@ class InMenu {
     devtool() {
         document.getElementById('webview').openDevTools();
     }
-    open() {
-        this.menu.popup(electron.remote.getCurrentWindow());
+}
+class UrlMenu extends MenuClass {
+    init(url) {
+        this.url = url;
+        this.addItem('Copy', () => { this.copy(); });
+        url.addEventListener('mousedown', (e) => {
+            switch (e.button) {
+                case 1:
+                    break;
+                case 2:
+                    return this.open();
+            }
+        }, false);
+    }
+    copy() {
+        electron.clipboard.writeText(this.url.value);
     }
 }
 const IpcRenderer = require('electron').ipcRenderer;

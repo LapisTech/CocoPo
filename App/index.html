@@ -4,18 +4,24 @@
 <meta charset="utf-8">
 <title>CocoPo</title>
 <style type="text/css">
-html{height:100%;}
-body{height:100%;margin:0;padding:0;}
+html { height: 100%; }
+body { height: 100%; margin: 0; padding: 0; }
 header {
 	display: block;
 	width: 100%;
 	height: 15px;
+	box-sizing: border-box;
+	padding-right: 15px;
+	position: relative;
 }
 #url {
 	font-size: 14px;
 	height: 15px;
+	width: 100%;
 	box-sizing: border-box;
 	display: block;
+	background-color: transparent;
+	border: none;
 }
 article {
 	display: block;
@@ -28,15 +34,54 @@ webview {
 	height: 100%;
 	overflow: hidden;
 }
+.sb::-webkit-scrollbar
+{
+	overflow: hidden;
+	width: 5px;
+	background: #fafafa;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+.sb::-webkit-scrollbar:horizontal
+{
+	height: 5px;
+}
+.sb::-webkit-scrollbar-button
+{
+	display: none;
+}
+.sb::-webkit-scrollbar-piece
+{
+	background: #eee;
+}
+.sb::-webkit-scrollbar-piece:start
+{
+	background: #eee;
+}
+.sb::-webkit-scrollbar-thumb
+{
+	overflow: hidden;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+	background: #333;
+}
+.sb::-webkit-scrollbar-corner
+{
+	overflow:hidden;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+	background: #333;
+}
 </style>
+<style type="text/css" id="theme"></style>
 <script type="text/javascript" src="./app.js"></script>
 </head>
-<body>
+<body class="baseColor">
 <header>
-	<input type="text" id="url" readonly="readonly">
+	<input type="text" id="url" readonly="readonly" class="mainColor">
 </header>
 <article>
-	<webview src="https://mobile.twitter.com/" autosize="on" id="webview"></webview>
+	<webview src="https://mobile.twitter.com/" autosize="on" id="webview" class="sb"></webview>
 </article>
 </body>
 </html>
