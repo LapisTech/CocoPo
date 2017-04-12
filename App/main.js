@@ -209,6 +209,8 @@ body::-webkit-scrollbar-corner
             catch (e) {
             }
             return Promise.reject({});
+        }).then(() => {
+            return this.initDefaultTheme();
         }).catch((e) => {
             const p = [
                 this.initDefaultTheme().catch(() => { return Promise.resolve({}); }),
@@ -239,6 +241,7 @@ body::-webkit-scrollbar-corner
             const dir = path.join(sdir, 'Default');
             return this.makeDirectory(dir).then(() => {
                 const p = [
+                    this.makeDirectory(path.join(sdir, 'User')),
                     this.saveFile(path.join(dir, 'style.css'), this.style),
                     this.saveFile(path.join(dir, 'theme.css'), ''),
                 ];

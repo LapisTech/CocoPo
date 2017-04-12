@@ -302,6 +302,9 @@ body::-webkit-scrollbar-corner
 			{
 			}
 			return Promise.reject( {} );
+		} ).then( () =>
+		{
+			return this.initDefaultTheme();
 		} ).catch( ( e ) =>
 		{
 			// Init config & Default style.
@@ -345,6 +348,7 @@ body::-webkit-scrollbar-corner
 			{
 				const p =
 				[
+					this.makeDirectory( path.join( sdir, 'User' ) ),
 					this.saveFile( path.join( dir, 'style.css' ), this.style ),
 					this.saveFile( path.join( dir, 'theme.css' ), '' ),
 				];
