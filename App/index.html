@@ -4,8 +4,23 @@
 <meta charset="utf-8">
 <title>CocoPo</title>
 <style type="text/css">
+.baseColor { background-color: #FFFFFF; }
+.baseColor2 { background-color: #DDDDDD; }
+.mainColor { color: #000000; }
+.mainBorderColor { border-color: #000000; }
+
 html { height: 100%; }
-body { height: 100%; margin: 0; padding: 0; }
+body { height: 100%; margin: 0; padding: 0; -webkit-app-region: no-drag; }
+button {
+	display: block;
+	margin: 0;
+	padding: 0.2rem;
+	border: 1px solid;
+	border-radius: 0.1rem;
+	background-color: transparent;
+	box-sizing: border-box;
+	cursor: pointer;
+}
 header {
 	display: block;
 	width: 100%;
@@ -13,6 +28,16 @@ header {
 	box-sizing: border-box;
 	padding-right: 15px;
 	position: relative;
+}
+header button, .setting_header button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 15px;
+	height: 15px;
+	font-size: 12px;
+	border: 0;
+	padding: 0;
 }
 #url {
 	font-size: 14px;
@@ -23,6 +48,11 @@ header {
 	background-color: transparent;
 	border: none;
 }
+#setting::before { content: "\2699"; /* U+2699 &#9881; */ }
+#close::before { content: "\274C"; /* U+2699 &#10060; */ }
+/*#update_theme::before { content: "Update"; }*/
+#edit_theme::before { content: "Edit"; }
+#select_theme::before { content: "Select"; }
 article {
 	display: block;
 	width: 100%;
@@ -34,6 +64,96 @@ webview {
 	height: 100%;
 	overflow: hidden;
 }
+section {
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+.page {
+	padding: 1px;
+	box-sizing: border-box;
+	width: 100%;
+	height: calc( 100% - 15px );
+	overflow: scroll;
+	position: absolute;
+	bottom: 0;
+}
+.page > div {
+	width: 80%;
+	margin: auto;
+}
+.setting_header {
+	-webkit-user-select: none;
+	-webkit-app-region: drag;
+	position: relative;
+	width: 100%;
+	height: 15px;
+}
+h2, h3 {
+	text-align: center;
+}
+select {
+	width: 100%;
+	border: 1px solid;
+	border-radius: 0.1rem;
+	box-sizing: border-box;
+}
+.box {
+	border: 1px solid;
+	border-radius: 0.1rem;
+	display: block;
+	width: 100%;
+	margin: 0.5rem auto;
+	padding: 0.5rem;
+	box-sizing: border-box;
+	background-color: transparent;
+}
+dt > button {
+	display: inline-block;
+	width: calc( 50% - 0.4rem );
+	margin: 0.1rem 0.2rem;
+}
+dd {
+	word-wrap: break-word;
+}
+.hide {
+	display: none;
+}
+.sc::-webkit-scrollbar {
+	background: #eee;
+	overflow: hidden;
+	width: 5px;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+.sc::-webkit-scrollbar:horizontal {
+	height: 5px;
+}
+.sc::-webkit-scrollbar-button {
+	display: none;
+}
+.sc::-webkit-scrollbar-piece {
+	background: #eee;
+}
+.sc::-webkit-scrollbar-piece:start {
+	background: #eee;
+}
+.sc::-webkit-scrollbar-thumb {
+	background: #333;
+	overflow: hidden;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+.sc::-webkit-scrollbar-corner {
+	background: #333;
+	overflow:hidden;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
 </style>
 <style type="text/css" id="theme"></style>
 <script type="text/javascript" src="./app.js"></script>
@@ -41,9 +161,37 @@ webview {
 <body class="baseColor">
 <header>
 	<input type="text" id="url" readonly="readonly" class="mainColor">
+	<button id="setting" class="baseColor2"></button>
 </header>
 <article>
 	<webview src="https://mobile.twitter.com/" autosize="on" id="webview" class="sb"></webview>
 </article>
+<section id="setting_page" class="hide baseColor2 mainColor">
+	<div class="setting_header baseColor">
+		<button id="close" class="baseColor2"></button>
+	</div>
+	<div class="page sc">
+		<div>
+			<h2>Theme</h2>
+			<select id="themelist" class="baseColor2 mainColor"></select>
+			<dl class="box mainBorderColor">
+				<dt>Info:</dt><dd id="theme_info"></dd>
+				<dt>URL:</dt><dd id="theme_url"></dd><dd><button id="update_theme"></button></dd>
+				<dt>Author:</dt><dd id="theme_author"></dd>
+				<dt>Version:</dt><dd id="theme_version"></dd>
+				<dt><button id="edit_theme"></button><button id="select_theme"></button></dt>
+			</dl>
+		</div>
+	</div>
+	<div id="theme_editor" class="page sc baseColor2 mainColor hide">
+		<div>
+			<h3>Theme (CocoPo)</h3>
+			<textarea id="edit_cocopo_theme" class="box sc mainBorderColor mainColor"></textarea>
+			<h3>Style (Twitter)</h3>
+			<textarea id="edit_twitter_style" class="box sc mainBorderColor mainColor"></textarea>
+			<button id="save_theme">
+		</div>
+	</div>
+</section>
 </body>
 </html>

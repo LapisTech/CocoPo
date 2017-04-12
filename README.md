@@ -14,7 +14,8 @@ CocoPoはTwitter Lite( https://mobile.twitter.com/ )をElectronのWebViewに入�
 
 ### Node.js
 
-Node.jsはWindowsならNodist、Linux/UNIX系OSならnvmをインストールしてください。
+Node.jsはWindowsならNodist、Linux/UNIX系OSならnvmからインストールしてください。
+バージョン変更が非常に楽になります。
 
 一応開発者は7以降を使っています。
 
@@ -59,13 +60,23 @@ X64のWindows向けのビルドが走ります。Mac？知らない子ですね�
 npm run release
 ```
 
+## Windows向け起動バイナリ
+
+Visual Studio 2017のC++の開発環境とかをインストールしていると、起動プログラムのビルドが可能です。
+
+ビルド済み起動プログラムは `CocoPo/CocoPo.exe` で、このプログラムを起動すると `CocoPo/App/Cocopo.exe` を起動します。
+
+リリースビルドを行うと `CocoPo-x64.....` みたいなフォルダが作られその中にプログラムが一式入りますが、これを `CocoPo` フォルダに入れて、フォルダ名を `App` に書き換えると使えるようになります。
+
+単に配布時に起動プログラムがごちゃごちゃしたところにあって分かりづらいため、一発で起動できるようにしただけのものです。
+
 # 機能
 
 ## ウィンドウ
 
 ### ページを開く
 
-Twitter外へのリンクはブラウザで開きます。
+Twitter外へのリンクはブラウザで開きます(セキュリティ対策もかねて、TwitterのURLでないものはすべてOSに開くのを任せる)。
 
 ### URLバー
 
@@ -108,6 +119,7 @@ Twitter外へのリンクはブラウザで開きます。
 * ユーザー固有テーマの編集
 * 固定フレーム化
     * Windows7とかだと見た目がすっきりする。
+* CocoPo自身のサイズ周りの指定をrem/%依存にする。
 
 ## 追加したいが仕様考え中
 

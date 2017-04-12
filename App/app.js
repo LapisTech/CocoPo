@@ -11,6 +11,96 @@ class Main {
         }
         this.menu.init(this.msg);
         this.umenu.init(this.url);
+        this.initSetting();
+        this.initWebView();
+    }
+    initSetting() {
+        const page = document.getElementById('setting_page');
+        if (!page) {
+            return;
+        }
+        const close = document.getElementById('close');
+        if (!close) {
+            return;
+        }
+        AddClickEvent('close', () => { page.classList.add('hide'); });
+        AddClickEvent('edit_theme', (e) => {
+            HideElement('theme_editor', false);
+            this.msg.send('get_theme', GetSelectedItem('themelist') || 'User');
+        });
+        this.msg.set('get_theme', (event, data) => {
+            const cocopo = document.getElementById('edit_cocopo_theme');
+            const twitter = document.getElementById('edit_twitter_style');
+            if (cocopo) {
+                cocopo.value = data.theme;
+            }
+            if (twitter) {
+                twitter.value = data.style;
+            }
+        });
+        this.msg.set('get_theme', (event, data) => {
+            const cocopo = document.getElementById('edit_cocopo_theme');
+            const twitter = document.getElementById('edit_twitter_style');
+            if (cocopo) {
+                cocopo.value = data.theme;
+            }
+            if (twitter) {
+                twitter.value = data.style;
+            }
+        });
+        AddClickEvent('save_theme', (e) => {
+            const data = {
+                target: GetSelectedItem('themelist'),
+            };
+            const cocopo = document.getElementById('edit_cocopo_theme');
+            const twitter = document.getElementById('edit_twitter_style');
+            if (cocopo) {
+                data.theme = cocopo.value;
+            }
+            if (twitter) {
+                data.style = twitter.value;
+            }
+            this.msg.send('save_theme', data);
+        });
+        this.msg.set('save_theme', (event, data) => {
+            HideElement('theme_editor', true);
+        });
+        AddClickEvent('select_theme', () => {
+            this.msg.send('theme', GetSelectedItem('themelist') || 'Default');
+        });
+        AddClickEvent('setting', () => {
+            HideElement(page, false);
+            this.msg.send('setting', {});
+        });
+        this.msg.set('setting', (event, data) => {
+            const select = document.getElementById('themelist');
+            if (!select) {
+                return;
+            }
+            RemoveAllChildren(select);
+            const elms = {};
+            elms['version'] = document.getElementById('theme_version');
+            elms['author'] = document.getElementById('theme_author');
+            elms['url'] = document.getElementById('theme_url');
+            elms['info'] = document.getElementById('theme_info');
+            elms['update'] = document.getElementById('update_theme');
+            data.list.forEach((theme) => {
+                const option = document.createElement('option');
+                if (data.theme === theme.name) {
+                    option.selected = true;
+                    UpdateThemeInfo(elms, theme);
+                }
+                option.value = theme.name;
+                option.text = theme.name;
+                select.appendChild(option);
+            });
+            select.addEventListener('change', (e) => {
+                const num = e.target.selectedIndex;
+                UpdateThemeInfo(elms, data.list[num]);
+            }, false);
+        });
+    }
+    initWebView() {
         const webview = document.getElementById('webview');
         if (!webview) {
             return;
@@ -29,17 +119,18 @@ class Main {
                     this.openURL(url);
                 }
             });
-            this.msg.send('theme', {});
+            this.msg.send('theme', '');
         });
         this.msg.set('theme', (event, data) => {
-            webview.insertCSS(data.css);
+            if (data.update) {
+                location.reload();
+            }
+            webview.insertCSS(data.style);
             const theme = document.getElementById('theme');
             if (!theme) {
                 return;
             }
-            for (let child = theme.lastChild; child; child = theme.lastChild) {
-                theme.removeChild(child);
-            }
+            RemoveAllChildren(theme);
             theme.appendChild(document.createTextNode(data.theme));
         });
     }
@@ -67,6 +158,61 @@ window.addEventListener('contextmenu', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     main.init();
 }, false);
+function RemoveAllChildren(e) {
+    for (let child = e.lastChild; child; child = e.lastChild) {
+        e.removeChild(child);
+    }
+}
+function UpdateThemeInfo(elms, theme) {
+    if (elms['version']) {
+        elms['version'].innerHTML = theme.version + '';
+    }
+    if (elms['author']) {
+        elms['author'].innerHTML = theme.author;
+    }
+    if (elms['url']) {
+        elms['url'].innerHTML = theme.url;
+    }
+    if (elms['info']) {
+        elms['info'].innerHTML = theme.info;
+    }
+    elms['update'].classList[theme.url ? 'remove' : 'add']('hide');
+    HideElement('theme_editor', true);
+}
+function AddClickEvent(id, callback) {
+    const e = document.getElementById(id);
+    if (!e) {
+        return;
+    }
+    e.addEventListener('click', callback, false);
+}
+function _HideElement(e, hide) {
+    e.classList[hide ? 'add' : 'remove']('hide');
+}
+function HideElement(id, hide) {
+    if (typeof id !== 'string') {
+        return _HideElement(id, hide);
+    }
+    const e = document.getElementById(id);
+    if (!e) {
+        return;
+    }
+    _HideElement(e, hide);
+}
+function GetSelectedItem(id) {
+    const select = document.getElementById(id);
+    if (!select) {
+        return '';
+    }
+    if (!select.selectedIndex || select.selectedIndex < 0) {
+        select.selectedIndex = 0;
+    }
+    const selectedItem = select.options[select.selectedIndex];
+    if (!selectedItem) {
+        return '';
+    }
+    return selectedItem.value || '';
+}
 const electron = require('electron');
 class MenuClass {
     constructor() {
@@ -81,6 +227,7 @@ class MenuClass {
 }
 class InMenu extends MenuClass {
     init(msg) {
+        this.addItem('Reload', () => { location.reload(); });
         this.addItem('Devtool', () => { this.devtool(); });
         this.menu.append(new electron.remote.MenuItem({ type: 'separator' }));
         this.addItem('Exit', () => { msg.send('exit', {}); });

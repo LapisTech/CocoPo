@@ -24,6 +24,7 @@ class InMenu extends MenuClass
 {
 	public init( msg: Message )
 	{
+		this.addItem( 'Reload', () => { location.reload(); } );
 		this.addItem( 'Devtool', () => { this.devtool(); } );
 		this.menu.append( new electron.remote.MenuItem( { type: 'separator' } ) );
 		this.addItem( 'Exit', () => { msg.send( 'exit', {} ); } );

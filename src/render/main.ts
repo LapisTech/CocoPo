@@ -21,7 +21,117 @@ class Main
 		this.menu.init( this.msg );
 		this.umenu.init( this.url );
 
-		const webview = document.getElementById('webview');
+		this.initSetting();
+
+		this.initWebView();
+	}
+
+	private initSetting()
+	{
+		const page = document.getElementById( 'setting_page' );
+		if ( !page ){ return; }
+
+		const close = document.getElementById( 'close' );
+		if ( !close ){ return; }
+		AddClickEvent( 'close', () => { page.classList.add( 'hide' ); } );
+
+		AddClickEvent( 'edit_theme', ( e ) =>
+		{
+			HideElement( 'theme_editor', false );
+			this.msg.send( 'get_theme', GetSelectedItem( 'themelist' ) || 'User' );
+		} );
+
+		this.msg.set( 'get_theme', ( event, data ) =>
+		{
+			const cocopo = <HTMLTextAreaElement>document.getElementById( 'edit_cocopo_theme' );
+			const twitter = <HTMLTextAreaElement>document.getElementById( 'edit_twitter_style' );
+
+			if ( cocopo ) { cocopo.value = data.theme; }
+			if ( twitter ) { twitter.value = data.style; }
+		} );
+
+		this.msg.set( 'get_theme', ( event, data ) =>
+		{
+			const cocopo = <HTMLTextAreaElement>document.getElementById( 'edit_cocopo_theme' );
+			const twitter = <HTMLTextAreaElement>document.getElementById( 'edit_twitter_style' );
+
+			if ( cocopo ) { cocopo.value = data.theme; }
+			if ( twitter ) { twitter.value = data.style; }
+		} );
+
+		AddClickEvent( 'save_theme', ( e ) =>
+		{
+			const data: { target: string, theme?: string, style?: string } =
+			{
+				target: GetSelectedItem( 'themelist' ),
+			};
+
+			const cocopo = <HTMLTextAreaElement>document.getElementById( 'edit_cocopo_theme' );
+			const twitter = <HTMLTextAreaElement>document.getElementById( 'edit_twitter_style' );
+
+			if ( cocopo ) { data.theme = cocopo.value; }
+			if ( twitter ) { data.style = twitter.value; }
+
+			this.msg.send( 'save_theme', data );
+		} );
+
+		this.msg.set( 'save_theme', ( event, data ) =>
+		{
+			// TODO:
+			HideElement( 'theme_editor', true );
+		} );
+
+		AddClickEvent( 'select_theme', () =>
+		{
+			this.msg.send( 'theme', GetSelectedItem( 'themelist' ) || 'Default' );
+		} );
+
+		AddClickEvent( 'setting', () =>
+		{
+			HideElement( page, false );
+			this.msg.send( 'setting', {} );
+		} );
+
+		this.msg.set( 'setting', ( event, data: SettingData ) =>
+		{
+			const select = <HTMLSelectElement>document.getElementById( 'themelist' );
+			if ( !select ) { return; }
+			RemoveAllChildren( select );
+
+			const elms: { [ key: string ]: HTMLElement } = {};
+			// Contents.
+			elms[ 'version' ] = <any>document.getElementById( 'theme_version' );
+			elms[ 'author' ] = <any>document.getElementById( 'theme_author' );
+			elms[ 'url' ] = <any>document.getElementById( 'theme_url' );
+			elms[ 'info' ] = <any>document.getElementById( 'theme_info' );
+			// Not contents.
+			elms[ 'update' ] = <any>document.getElementById( 'update_theme' );
+
+			data.list.forEach( ( theme ) =>
+			{
+				const option = document.createElement( 'option' );
+				if ( data.theme === theme.name )
+				{
+					option.selected = true;
+					UpdateThemeInfo( elms, theme );
+				}
+				option.value = theme.name;
+				option.text = theme.name;
+				select.appendChild( option );
+			} );
+
+			select.addEventListener( 'change', ( e ) =>
+			{
+				const num = (<HTMLSelectElement>e.target).selectedIndex;
+				UpdateThemeInfo( elms, data.list[ num ] );
+			}, false );
+		} );
+	}
+
+	private initWebView()
+	{
+
+		const webview = document.getElementById( 'webview' );
 		if ( !webview ){ return; }
 		webview.addEventListener( 'new-window', ( e ) => { this.openURL( (<any>e).url ); });
 		webview.addEventListener( 'dom-ready', () =>
@@ -60,18 +170,16 @@ class Main
 			webview.addEventListener( '', ( e ) =>{console.log('',e);});*/
 
 
-			this.msg.send( 'theme', {} );
+			this.msg.send( 'theme', '' );
 		} );
 
 		this.msg.set( 'theme', ( event, data ) =>
 		{
-			(<any>webview).insertCSS( data.css );
+			if ( data.update ) { location.reload(); }
+			(<any>webview).insertCSS( data.style );
 			const theme = <HTMLStyleElement>document.getElementById( 'theme' );
 			if ( !theme ) { return; }
-			for ( let child = theme.lastChild ; child ; child = theme.lastChild )
-			{
-				theme.removeChild( child );
-			}
+			RemoveAllChildren( theme );
 			theme.appendChild( document.createTextNode( data.theme ) );
 		} );
 	}
@@ -114,3 +222,54 @@ document.addEventListener( 'DOMContentLoaded', () =>
 {
 	main.init();
 }, false );
+
+function RemoveAllChildren( e: HTMLElement )
+{
+	for ( let child = e.lastChild ; child ; child = e.lastChild )
+	{
+		e.removeChild( child );
+	}
+}
+
+function UpdateThemeInfo( elms: { [ keys: string ]: HTMLElement }, theme: ThemeData )
+{
+	if ( elms[ 'version' ] ) { elms[ 'version' ].innerHTML = theme.version + ''; }
+	if ( elms[ 'author' ] ) { elms[ 'author' ].innerHTML = theme.author; }
+	if ( elms[ 'url' ] ) { elms[ 'url' ].innerHTML = theme.url; }
+	if ( elms[ 'info' ] ) { elms[ 'info' ].innerHTML = theme.info; }
+
+	elms[ 'update' ].classList[ theme.url ? 'remove' : 'add' ]( 'hide' );
+
+	HideElement( 'theme_editor', true );
+}
+
+function AddClickEvent( id: string, callback: ( this: HTMLElement, event: MouseEvent ) => void )
+{
+	const e = document.getElementById( id );
+	if ( !e ){ return; }
+	e.addEventListener( 'click', callback, false );	
+}
+
+function _HideElement( e: HTMLElement, hide: boolean )
+{
+
+	e.classList[ hide ? 'add' : 'remove' ]( 'hide' );
+}
+
+function HideElement( id: string | HTMLElement, hide: boolean )
+{
+	if ( typeof id !== 'string' ) { return _HideElement( id, hide ); }
+	const e = document.getElementById( id );
+	if ( !e ) { return; }
+	_HideElement( e, hide );
+}
+
+function GetSelectedItem( id: string ): string
+{
+	const select = <HTMLSelectElement>document.getElementById( id );
+	if ( !select ) { return ''; }
+	if ( !select.selectedIndex || select.selectedIndex < 0 ) { select.selectedIndex = 0; }
+	const selectedItem = <HTMLOptionElement>select.options[ select.selectedIndex ];
+	if ( !selectedItem ) { return ''; }
+	return selectedItem.value || '';
+}
