@@ -1,6 +1,8 @@
 import * as electron from 'electron';
 import * as fs       from 'fs';
 import * as path     from 'path';
+import * as http     from 'http';
+import * as https    from 'https';
 const PackageInfo = require( './package.json' );
 
 const App           = electron.app;
@@ -509,6 +511,82 @@ function ExistsDirectory( dir: string ): boolean
 		if ( stat && stat.isDirectory() ) { return true; }
 	} catch( e ) {}
 	return false;
+}
+
+function _Get( resolve: ( value?: {} | PromiseLike<{}> | undefined ) => void, reject: ( reason: any ) => void )
+{
+	return ( result: http.IncomingMessage ) =>
+	{
+		// TODO: check
+		let body = '';
+		result.setEncoding( 'utf8' );
+		result.on( 'data', (chunk) => { body += chunk; } );
+		result.on( 'end', () => { resolve( body ); } );
+	}
+}
+
+function Get( url: string ): Promise<string>
+{
+	return new Promise( ( resolve, reject ) =>
+	{
+		if ( url.match( /^https\:\/\// ) )
+		{
+			https.get( url, _Get( resolve, reject ) );
+		} else
+		{
+			http.get( url, _Get( resolve, reject ) );
+		}
+	} );
+}
+
+function GetThemeInfo( url: string )
+{
+	return Get( url ).then( ( result ) =>
+	{
+		try
+		{
+			const data = <ThemeData>JSON.parse( result );
+			if (
+				typeof data !== 'object' ||
+				typeof data.version !== 'number' ||
+				typeof data.name !== 'string' )
+			{
+				return Promise.reject( {} );
+			}
+			if ( typeof data.author !== 'string' ) { data.author = 'Unknown'; }
+			if ( typeof data.info !== 'string' ) { data.info = ''; }
+			data.url = url;
+			return Promise.resolve( data );
+		} catch( e ) {}
+		return Promise.reject( {} );
+	} );
+}
+
+function DownloadTheme( data: ThemeData )
+{
+	const baseurl = data.url.replace( /\/[\/]*/, '' );
+	const p =
+	[
+		Get( data.style || baseurl + '/style.css' ).catch( ( error ) =>
+		{
+			return Promise.resolve( '' );
+		} ).then( ( data ) =>
+		{
+			// Save:
+		} ),
+		Get( data.theme || baseurl + '/theme.css' ).catch( ( error ) =>
+		{
+			return Promise.resolve( '' );
+		} ).then( ( data ) =>
+		{
+			// Save:
+		} ),
+	];
+
+	return Promise.all( p ).then( () =>
+	{
+
+	} );
 }
 
 // ======================================== //
