@@ -1,0 +1,12 @@
+.baseColor { background-color: #333238; }
+.baseColor2 { background-color: #444248; }
+
+.mainColor { color: #babcdc; }
+.mainBorderColor { border-color: #babcdc; }
+
+.subColor {}
+
+button { color: #babcdc; }
+
+.sc::-webkit-scrollbar-thumb { background: #eee; }
+.sc::-webkit-scrollbar-corner { background: #eee; }

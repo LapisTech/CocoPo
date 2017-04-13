@@ -5,10 +5,7 @@ class Main {
         this.msg = new Message();
         this.menu = new InMenu();
         this.umenu = new UrlMenu();
-        const url = document.getElementById('url');
-        if (url) {
-            this.url = url;
-        }
+        this.url = document.getElementById('url');
         this.menu.init(this.msg);
         this.umenu.init(this.url);
         this.initSetting();
@@ -16,14 +13,10 @@ class Main {
     }
     initSetting() {
         const page = document.getElementById('setting_page');
-        if (!page) {
-            return;
-        }
         const close = document.getElementById('close');
-        if (!close) {
-            return;
-        }
         AddClickEvent('close', () => { page.classList.add('hide'); });
+        AddClickEvent('open_userdir', () => { this.msg.send('userdir', {}); });
+        AddClickEvent('open_about', () => { this.msg.send('about', {}); });
         AddClickEvent('edit_theme', (e) => {
             HideElement('theme_editor', false);
             this.msg.send('get_theme', GetSelectedItem('themelist') || 'User');
@@ -74,15 +67,13 @@ class Main {
         });
         this.msg.set('setting', (event, data) => {
             const select = document.getElementById('themelist');
-            if (!select) {
-                return;
-            }
             RemoveAllChildren(select);
             const elms = {};
             elms['version'] = document.getElementById('theme_version');
             elms['author'] = document.getElementById('theme_author');
             elms['url'] = document.getElementById('theme_url');
             elms['info'] = document.getElementById('theme_info');
+            elms['theme_name'] = document.getElementById('theme_name');
             elms['update'] = document.getElementById('update_theme');
             data.list.forEach((theme) => {
                 const option = document.createElement('option');
@@ -98,13 +89,22 @@ class Main {
                 const num = e.target.selectedIndex;
                 UpdateThemeInfo(elms, data.list[num]);
             }, false);
+            const toggle = document.getElementById('frame');
+            if (data.noframe) {
+                toggle.classList.remove('on');
+            }
+        });
+        AddClickEvent('frame', () => {
+            const toggle = document.getElementById('frame');
+            toggle.classList.toggle('on');
+        });
+        AddClickEvent('update_frame', () => {
+            const toggle = document.getElementById('frame');
+            this.msg.send('frame', !toggle.classList.contains('on'));
         });
     }
     initWebView() {
         const webview = document.getElementById('webview');
-        if (!webview) {
-            return;
-        }
         webview.addEventListener('new-window', (e) => { this.openURL(e.url); });
         webview.addEventListener('dom-ready', () => {
             const wb = webview;
@@ -125,11 +125,11 @@ class Main {
             if (data.update) {
                 location.reload();
             }
+            if (data.noframe) {
+                document.body.classList.add('noframe');
+            }
             webview.insertCSS(data.style);
             const theme = document.getElementById('theme');
-            if (!theme) {
-                return;
-            }
             RemoveAllChildren(theme);
             theme.appendChild(document.createTextNode(data.theme));
         });
@@ -164,26 +164,16 @@ function RemoveAllChildren(e) {
     }
 }
 function UpdateThemeInfo(elms, theme) {
-    if (elms['version']) {
-        elms['version'].innerHTML = theme.version + '';
-    }
-    if (elms['author']) {
-        elms['author'].innerHTML = theme.author;
-    }
-    if (elms['url']) {
-        elms['url'].innerHTML = theme.url;
-    }
-    if (elms['info']) {
-        elms['info'].innerHTML = theme.info;
-    }
+    elms['version'].innerHTML = theme.version + '';
+    elms['author'].innerHTML = theme.author;
+    elms['url'].innerHTML = theme.url;
+    elms['info'].innerHTML = theme.info;
+    elms['theme_name'].innerHTML = theme.name || '';
     elms['update'].classList[theme.url ? 'remove' : 'add']('hide');
     HideElement('theme_editor', true);
 }
 function AddClickEvent(id, callback) {
     const e = document.getElementById(id);
-    if (!e) {
-        return;
-    }
     e.addEventListener('click', callback, false);
 }
 function _HideElement(e, hide) {
@@ -194,9 +184,6 @@ function HideElement(id, hide) {
         return _HideElement(id, hide);
     }
     const e = document.getElementById(id);
-    if (!e) {
-        return;
-    }
     _HideElement(e, hide);
 }
 function GetSelectedItem(id) {

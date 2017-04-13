@@ -18,6 +18,12 @@ console.log( App.getPath( 'userData' ) );
 interface Config
 {
 	theme?: string,
+	x?: number,
+	y?: number,
+	width?: number,
+	height?: number,
+	noframe?: boolean,
+	top?: boolean,
 }
 
 class Main
@@ -32,39 +38,32 @@ class Main
 		font-size: 10px !important;
 	}
 }
-body::-webkit-scrollbar
-{
+body::-webkit-scrollbar {
 	overflow: hidden;
 	width: 5px;
 	background: #eee;
 	-webkit-border-radius: 3px;
 	border-radius: 3px;
 }
-body::-webkit-scrollbar:horizontal
-{
+body::-webkit-scrollbar:horizontal {
 	height: 5px;
 }
-body::-webkit-scrollbar-button
-{
+body::-webkit-scrollbar-button {
 	display: none;
 }
-body::-webkit-scrollbar-piece
-{
+body::-webkit-scrollbar-piece {
 	background: #eee;
 }
-body::-webkit-scrollbar-piece:start
-{
+body::-webkit-scrollbar-piece:start {
 	background: #eee;
 }
-body::-webkit-scrollbar-thumb
-{
+body::-webkit-scrollbar-thumb {
 	overflow: hidden;
 	-webkit-border-radius: 3px;
 	border-radius: 3px;
 	background: #333;
 }
-body::-webkit-scrollbar-corner
-{
+body::-webkit-scrollbar-corner {
 	overflow:hidden;
 	-webkit-border-radius: 3px;
 	border-radius: 3px;
@@ -105,25 +104,28 @@ body::-webkit-scrollbar-corner
 	{
 		this.msg = new Message();
 
-		this.msg.set( 'resize', ( event, data ) =>
+		this.msg.set( 'userdir', ( event, data ) =>
 		{
-			if ( !data || typeof data !== 'object' )
-			{
-				event.sender.send( 'asynchronous-reply', { type: 'resixe', data: 'ng' } );
-				return;
-			}
-			this.win.setSize( data.width || 100, data.height || 180, false );
-			event.sender.send( 'asynchronous-reply', { type: 'resixe', data: 'ok' } );
+			electron.shell.openExternal( App.getPath( 'userData' ) );
 		} );
+
+		this.msg.set( 'about', ( event, data ) => { this.about(); } );
 
 		this.msg.set( 'get_theme', ( event, data ) =>
 		{
 			this.loadTheme( <string>data ).then( ( result ) =>
 			{
+				const data: Theme =
+				{
+					update: result.update,
+					style: result.style,
+					theme: result.theme,
+					noframe: !!this.conf.noframe,
+				};
 				event.sender.send( 'asynchronous-reply',
 				{
 					type: 'get_theme',
-					data: { style: result.style, theme: result.theme, update: result.update }
+					data: data
 				} );
 			} );
 		} );
@@ -174,10 +176,17 @@ body::-webkit-scrollbar-corner
 					this.conf.theme = <string>data;
 					this.saveConfig();
 				}
+				const tdata: Theme =
+				{
+					update: result.update,
+					style: this.style,
+					theme: this.theme,
+					noframe: !!this.conf.noframe,
+				};
 				event.sender.send( 'asynchronous-reply',
 				{
 					type: 'theme',
-					data: { style: this.style, theme: this.theme, update: result.update }
+					data: tdata,
 				} );
 			} );
 		} );
@@ -188,6 +197,7 @@ body::-webkit-scrollbar-corner
 			{
 				theme: this.conf.theme || 'Default',
 				list: [],
+				noframe: !!this.conf.noframe,
 			};
 
 			this.loadThemaList().then( ( list ) =>
@@ -202,6 +212,23 @@ body::-webkit-scrollbar-corner
 
 		} );
 
+		this.msg.set( 'frame', ( event, data ) =>
+		{
+			this.conf.noframe = !!data;
+			this.saveConfig().then( () =>
+			{
+				this.restart();
+			} );
+		} );
+
+		this.msg.set( 'top', ( event, data ) =>
+		{
+			this.conf.top = !!data
+			this.win.setAlwaysOnTop( this.conf.top );
+			this.saveConfig();
+		} );
+
+
 		this.msg.set( 'exit', ( event, data ) =>
 		{
 			this.win.close();
@@ -210,7 +237,7 @@ body::-webkit-scrollbar-corner
 
 	private createWindow()
 	{
-		this.win = new BrowserWindow(
+		const option: Electron.BrowserWindowOptions =
 		{
 			width: 250,
 			height: 480,
@@ -218,15 +245,44 @@ body::-webkit-scrollbar-corner
 			resizable: true,
 			//nodeIntegration: false,
 			//transparent: true,
-			//alwaysOnTop: true,
 			skipTaskbar: true,
-		} );
+		};
 
-		//win.setSkipTaskbar( true );
+		if ( this.conf.noframe ) { option.frame = false; }
+
+		if ( this.conf.top ) { option.alwaysOnTop = true; }
+
+		if ( this.conf.x !== undefined && this.conf.y !== undefined )
+		{
+			option.x = this.conf.x;
+			option.y = this.conf.y;
+		}
+
+		if ( this.conf.width !== undefined && this.conf.height !== undefined )
+		{
+			option.width = this.conf.width;
+			option.height = this.conf.height;
+		}
+
+		this.win = new BrowserWindow( option );
 
 		this.win.setMenuBarVisibility( false );
 
 		this.win.loadURL( 'file://' + __dirname + '/index.html' );
+
+		this.win.on( 'close', () =>
+		{
+			//win = null;
+			const position = this.win.getPosition();
+			this.conf.x = position[ 0 ];
+			this.conf.y = position[ 1 ];
+
+			const size = this.win.getSize();
+			this.conf.width = size[ 0 ];
+			this.conf.height = size[ 1 ];
+
+			this.saveConfig( true );
+		} );
 
 		this.win.on( 'closed', () =>
 		{
@@ -291,22 +347,43 @@ body::-webkit-scrollbar-corner
 
 	private loadConfig(): Promise<Config>
 	{
-		return this.loadFile( path.join( App.getPath( 'userData' ), 'config.json' ) ).then( ( data ) =>
+		return this.loadFile( path.join( App.getPath( 'userData' ), 'config.json' ) ).then( ( data ): Promise<Config> =>
 		{
 			try
 			{
 				const conf = JSON.parse( data );
 				if ( conf )
 				{
+					if ( typeof conf.theme !== 'string' )
+					{
+						conf.theme = 'Default';
+					}
+					if ( typeof conf.x !== 'number' || typeof conf.y !== 'number' )
+					{
+						delete conf.x;
+						delete conf.y;
+					}
+					if ( typeof conf.width  !== 'number' || typeof conf.height !== 'number' )
+					{
+						delete conf.width;
+						delete conf.height;
+					}
+					if ( typeof conf.noframe !== 'boolean' )
+					{
+						delete conf.noframe;
+					}
 					return Promise.resolve( <Config>conf );
 				}
 			}catch( e )
 			{
 			}
 			return Promise.reject( {} );
-		} ).then( () =>
+		} ).then( ( conf ) =>
 		{
-			return this.initDefaultTheme();
+			return this.initDefaultTheme().then( () =>
+			{
+				return Promise.resolve( conf );
+			} );
 		} ).catch( ( e ) =>
 		{
 			// Init config & Default style.
@@ -322,10 +399,16 @@ body::-webkit-scrollbar-corner
 		} );
 	}
 
-	private saveConfig()
+	private saveConfig( sync: boolean = false )
 	{
 		const conf = this.conf;
-		return this.saveFile( path.join( App.getPath( 'userData' ), 'config.json' ), JSON.stringify( conf ) );
+		const file = path.join( App.getPath( 'userData' ), 'config.json' );
+		if ( sync )
+		{
+			fs.writeFileSync( file, JSON.stringify( conf ) );
+			return Promise.resolve( {} );
+		}
+		return this.saveFile( file, JSON.stringify( conf ) );
 	}
 
 	private makeDirectory( dir: string )
@@ -457,17 +540,24 @@ body::-webkit-scrollbar-corner
 		Dialog.showMessageBox( this.win,
 		{
 			title: 'About',
-			buttons: [ 'Site', 'OK' ],
+			buttons: [ 'OK', 'Site' ],
 			message: PackageInfo.appname + ' versions.',
 			detail: list.map( ( v ) => { return [ v.name, v.value ].join( ': ' ) } ).join( "\n" ),
 		}, ( res ) =>
 		{
-			if ( res === 0 )
+			// res === 0 ... buttons[ 0 ] or Close button.
+			if ( res === 1 )
 			{
 				// Open site.
 				electron.shell.openExternal( PackageInfo.site );
 			}
 		} );
+	}
+
+	private restart()
+	{
+		App.relaunch();
+		App.quit();
 	}
 }
 

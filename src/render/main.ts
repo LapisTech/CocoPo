@@ -15,8 +15,7 @@ class Main
 		this.menu = new InMenu();
 		this.umenu = new UrlMenu();
 
-		const url = document.getElementById( 'url' );
-		if ( url ) { this.url = <HTMLInputElement>url; }
+		this.url  = <HTMLInputElement>document.getElementById( 'url' );
 
 		this.menu.init( this.msg );
 		this.umenu.init( this.url );
@@ -28,12 +27,13 @@ class Main
 
 	private initSetting()
 	{
-		const page = document.getElementById( 'setting_page' );
-		if ( !page ){ return; }
+		const page = <HTMLElement>document.getElementById( 'setting_page' );
 
-		const close = document.getElementById( 'close' );
-		if ( !close ){ return; }
+		const close = <HTMLElement>document.getElementById( 'close' );
 		AddClickEvent( 'close', () => { page.classList.add( 'hide' ); } );
+
+		AddClickEvent( 'open_userdir', () => { this.msg.send( 'userdir', {} ); } );
+		AddClickEvent( 'open_about', () => { this.msg.send( 'about', {} ); } );
 
 		AddClickEvent( 'edit_theme', ( e ) =>
 		{
@@ -95,17 +95,17 @@ class Main
 		this.msg.set( 'setting', ( event, data: SettingData ) =>
 		{
 			const select = <HTMLSelectElement>document.getElementById( 'themelist' );
-			if ( !select ) { return; }
 			RemoveAllChildren( select );
 
 			const elms: { [ key: string ]: HTMLElement } = {};
 			// Contents.
-			elms[ 'version' ] = <any>document.getElementById( 'theme_version' );
-			elms[ 'author' ] = <any>document.getElementById( 'theme_author' );
-			elms[ 'url' ] = <any>document.getElementById( 'theme_url' );
-			elms[ 'info' ] = <any>document.getElementById( 'theme_info' );
+			elms[ 'version' ] = <HTMLElement>document.getElementById( 'theme_version' );
+			elms[ 'author' ] = <HTMLElement>document.getElementById( 'theme_author' );
+			elms[ 'url' ] = <HTMLElement>document.getElementById( 'theme_url' );
+			elms[ 'info' ] = <HTMLElement>document.getElementById( 'theme_info' );
+			elms[ 'theme_name' ] = <HTMLElement>document.getElementById( 'theme_name' );
 			// Not contents.
-			elms[ 'update' ] = <any>document.getElementById( 'update_theme' );
+			elms[ 'update' ] = <HTMLElement>document.getElementById( 'update_theme' );
 
 			data.list.forEach( ( theme ) =>
 			{
@@ -125,14 +125,29 @@ class Main
 				const num = (<HTMLSelectElement>e.target).selectedIndex;
 				UpdateThemeInfo( elms, data.list[ num ] );
 			}, false );
+
+			const toggle = <HTMLElement>document.getElementById( 'frame' );
+			if ( data.noframe ) { toggle.classList.remove( 'on' ); }
 		} );
+
+		AddClickEvent( 'frame', () =>
+		{
+			const toggle = <HTMLElement>document.getElementById( 'frame' );
+			toggle.classList.toggle( 'on' );
+		} );
+
+		AddClickEvent( 'update_frame', () =>
+		{
+			const toggle = <HTMLElement>document.getElementById( 'frame' );
+			this.msg.send( 'frame', !toggle.classList.contains( 'on' ) );
+		} );
+
 	}
 
 	private initWebView()
 	{
 
-		const webview = document.getElementById( 'webview' );
-		if ( !webview ){ return; }
+		const webview = <HTMLElement>document.getElementById( 'webview' );
 		webview.addEventListener( 'new-window', ( e ) => { this.openURL( (<any>e).url ); });
 		webview.addEventListener( 'dom-ready', () =>
 		{
@@ -142,7 +157,7 @@ class Main
 			webview.addEventListener( 'did-navigate-in-page', ( e ) =>
 			{
 //console.log('did-navigate-in-page',e);
-				const url = (<any>e).url;//wb.src;
+				const url = (<any>e).url;
 				if ( this.isTwitterURL( url ) )
 				{
 					this.updateURLBar( url );
@@ -173,12 +188,12 @@ class Main
 			this.msg.send( 'theme', '' );
 		} );
 
-		this.msg.set( 'theme', ( event, data ) =>
+		this.msg.set( 'theme', ( event, data: Theme ) =>
 		{
 			if ( data.update ) { location.reload(); }
+			if ( data.noframe ) { document.body.classList.add( 'noframe' ); }
 			(<any>webview).insertCSS( data.style );
 			const theme = <HTMLStyleElement>document.getElementById( 'theme' );
-			if ( !theme ) { return; }
 			RemoveAllChildren( theme );
 			theme.appendChild( document.createTextNode( data.theme ) );
 		} );
@@ -233,10 +248,12 @@ function RemoveAllChildren( e: HTMLElement )
 
 function UpdateThemeInfo( elms: { [ keys: string ]: HTMLElement }, theme: ThemeData )
 {
-	if ( elms[ 'version' ] ) { elms[ 'version' ].innerHTML = theme.version + ''; }
-	if ( elms[ 'author' ] ) { elms[ 'author' ].innerHTML = theme.author; }
-	if ( elms[ 'url' ] ) { elms[ 'url' ].innerHTML = theme.url; }
-	if ( elms[ 'info' ] ) { elms[ 'info' ].innerHTML = theme.info; }
+	elms[ 'version' ].innerHTML = theme.version + '';
+	elms[ 'author' ].innerHTML = theme.author;
+	elms[ 'url' ].innerHTML = theme.url;
+	elms[ 'info' ].innerHTML = theme.info;
+
+	elms[ 'theme_name' ].innerHTML = theme.name || '';
 
 	elms[ 'update' ].classList[ theme.url ? 'remove' : 'add' ]( 'hide' );
 
@@ -245,22 +262,19 @@ function UpdateThemeInfo( elms: { [ keys: string ]: HTMLElement }, theme: ThemeD
 
 function AddClickEvent( id: string, callback: ( this: HTMLElement, event: MouseEvent ) => void )
 {
-	const e = document.getElementById( id );
-	if ( !e ){ return; }
+	const e = <HTMLElement>document.getElementById( id );
 	e.addEventListener( 'click', callback, false );	
 }
 
 function _HideElement( e: HTMLElement, hide: boolean )
 {
-
 	e.classList[ hide ? 'add' : 'remove' ]( 'hide' );
 }
 
 function HideElement( id: string | HTMLElement, hide: boolean )
 {
 	if ( typeof id !== 'string' ) { return _HideElement( id, hide ); }
-	const e = document.getElementById( id );
-	if ( !e ) { return; }
+	const e = <HTMLElement>document.getElementById( id );
 	_HideElement( e, hide );
 }
 

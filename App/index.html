@@ -9,8 +9,20 @@
 .mainColor { color: #000000; }
 .mainBorderColor { border-color: #000000; }
 
-html { height: 100%; }
+html { height: 100%; font-size: 15px; }
 body { height: 100%; margin: 0; padding: 0; -webkit-app-region: no-drag; }
+.icon {
+	-webkit-app-region: drag;
+	display: none;
+	background-image: url( trayicon.png );
+	background-size: cover;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 1rem;
+	height: 1rem;
+}
+.noframe .icon { display: block; }
 button {
 	display: block;
 	margin: 0;
@@ -20,44 +32,78 @@ button {
 	background-color: transparent;
 	box-sizing: border-box;
 	cursor: pointer;
+	-webkit-app-region: no-drag;
 }
 header {
 	display: block;
 	width: 100%;
-	height: 15px;
+	height: 1rem;
 	box-sizing: border-box;
-	padding-right: 15px;
+	padding-right: 1rem;
 	position: relative;
 }
+.noframe header{ padding-left: 1rem; }
 header button, .setting_header button {
 	position: absolute;
 	top: 0;
 	right: 0;
-	width: 15px;
-	height: 15px;
+	width: 1rem;
+	height: 1rem;
 	font-size: 12px;
 	border: 0;
 	padding: 0;
 }
+.toggle {
+	border: solid 0.2rem #999999;
+	display: block;
+	position: relative;
+	box-sizing: border-box;
+	cursor: pointer;
+	width: 2rem;
+	height: 1.4rem;
+	border-radius: 0.7rem;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	transition: all 0.1s ease;
+}
+.toggle.on { background-color: #999999; }
+.toggle:after {
+	background-color: #ffffff;
+	content: '';
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 1rem;
+	height: 1rem;
+	border-radius: 0.5rem;
+	transition: all 0.1s ease;
+}
+.toggle.on:after { left: 0.6rem; }
 #url {
 	font-size: 14px;
-	height: 15px;
+	height: 1rem;
 	width: 100%;
 	box-sizing: border-box;
 	display: block;
 	background-color: transparent;
 	border: none;
 }
+#save_theme { width: 100%; }
 #setting::before { content: "\2699"; /* U+2699 &#9881; */ }
 #close::before { content: "\274C"; /* U+2699 &#10060; */ }
 /*#update_theme::before { content: "Update"; }*/
+#open_userdir::before { content: "Open"; }
 #edit_theme::before { content: "Edit"; }
 #select_theme::before { content: "Select"; }
 #save_theme::before { content: "Save"; }
+#update_frame::before { content: "Save"; }
+#open_about::before { content: "Open"; }
 article {
 	display: block;
 	width: 100%;
-	height: calc( 100% - 15px );
+	height: calc( 100% - 1rem );
 }
 webview {
 	display: flex;
@@ -78,7 +124,7 @@ section {
 	padding: 1px;
 	box-sizing: border-box;
 	width: 100%;
-	height: calc( 100% - 15px );
+	height: calc( 100% - 1rem );
 	overflow: scroll;
 	position: absolute;
 	bottom: 0;
@@ -92,7 +138,7 @@ section {
 	-webkit-app-region: drag;
 	position: relative;
 	width: 100%;
-	height: 15px;
+	height: 1rem;
 }
 h2, h3 {
 	text-align: center;
@@ -116,16 +162,23 @@ select {
 dt > button {
 	display: inline-block;
 	width: calc( 50% - 0.4rem );
-	margin: 0.1rem 0.2rem;
+	margin: 0.3rem 0.2rem 0.1rem;
+}
+dt.single > button {
+	width: 100%;
+	margin: 0.3rem 0 0.1rem;
 }
 dd {
 	word-wrap: break-word;
+}
+textarea {
+	height: 8rem;
 }
 .hide {
 	display: none;
 }
 .sc::-webkit-scrollbar {
-	background: #eee;
+	background: transparent;
 	overflow: hidden;
 	width: 5px;
 	-webkit-border-radius: 3px;
@@ -138,10 +191,10 @@ dd {
 	display: none;
 }
 .sc::-webkit-scrollbar-piece {
-	background: #eee;
+	background: transparent;
 }
 .sc::-webkit-scrollbar-piece:start {
-	background: #eee;
+	background: transparent;
 }
 .sc::-webkit-scrollbar-thumb {
 	background: #333;
@@ -161,6 +214,7 @@ dd {
 </head>
 <body class="baseColor">
 <header>
+	<div class="icon"></div>
 	<input type="text" id="url" readonly="readonly" class="mainColor">
 	<button id="setting" class="baseColor2"></button>
 </header>
@@ -173,6 +227,13 @@ dd {
 	</div>
 	<div class="page sc">
 		<div>
+			<h2>Setting</h2>
+			<dl class="box mainBorderColor">
+				<dt>Open user directory</dt>
+				<dt class="single"><button id="open_userdir"></button></dt>
+			</dl>
+		</div>
+		<div>
 			<h2>Theme</h2>
 			<select id="themelist" class="baseColor2 mainColor"></select>
 			<dl class="box mainBorderColor">
@@ -183,9 +244,24 @@ dd {
 				<dt><button id="edit_theme"></button><button id="select_theme"></button></dt>
 			</dl>
 		</div>
+		<div>
+			<h2>Window</h2>
+			<dl class="box mainBorderColor">
+				<dt>Frame</dt><dd><div class="toggle on" id="frame"></div></dd>
+				<dt class="single"><button id="update_frame"></button></dt>
+			</dl>
+		</div>
+		<div>
+			<h2>Other</h2>
+			<dl class="box mainBorderColor">
+				<dt>About</dt>
+				<dt class="single"><button id="open_about"></button></dt>
+			</dl>
+		</div>
 	</div>
 	<div id="theme_editor" class="page sc baseColor2 mainColor hide">
 		<div>
+			<h2 id="theme_name"></h2>
 			<h3>Theme (CocoPo)</h3>
 			<textarea id="edit_cocopo_theme" class="box sc mainBorderColor mainColor"></textarea>
 			<h3>Style (Twitter)</h3>
