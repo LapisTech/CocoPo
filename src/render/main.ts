@@ -50,15 +50,6 @@ class Main
 			if ( twitter ) { twitter.value = data.style; }
 		} );
 
-		this.msg.set( 'get_theme', ( event, data ) =>
-		{
-			const cocopo = <HTMLTextAreaElement>document.getElementById( 'edit_cocopo_theme' );
-			const twitter = <HTMLTextAreaElement>document.getElementById( 'edit_twitter_style' );
-
-			if ( cocopo ) { cocopo.value = data.theme; }
-			if ( twitter ) { twitter.value = data.style; }
-		} );
-
 		AddClickEvent( 'save_theme', ( e ) =>
 		{
 			const data: { target: string, theme?: string, style?: string } =
@@ -81,6 +72,35 @@ class Main
 			HideElement( 'theme_editor', true );
 		} );
 
+		AddClickEvent( 'update_theme', () =>
+		{
+			this.msg.send( 'update_theme', GetSelectedItem( 'themelist' ) || 'Default' );
+		} );
+
+		this.msg.set( 'update_theme', ( event, data ) =>
+		{
+			// No update.
+			alert( 'No update.' );
+		} );
+
+		AddClickEvent( 'install_theme', () =>
+		{
+			const input = <HTMLInputElement>document.getElementById( 'install_url' );
+			const url = input.value;
+			if ( !url.match( /^https{0,1}\:\/\// ) )
+			{
+				alert( 'This data is not URL.' );
+				return;
+			}
+			this.msg.send( 'install_theme', url );
+		} );
+
+		this.msg.set( 'install_theme', ( event, data ) =>
+		{
+			// Install Error.
+			alert( 'Install error.' );
+		} );
+
 		AddClickEvent( 'select_theme', () =>
 		{
 			this.msg.send( 'theme', GetSelectedItem( 'themelist' ) || 'Default' );
@@ -96,6 +116,11 @@ class Main
 		{
 			const select = <HTMLSelectElement>document.getElementById( 'themelist' );
 			RemoveAllChildren( select );
+
+			if ( data.install )
+			{
+				alert( 'Install Success: ' + data.install );
+			}
 
 			const elms: { [ key: string ]: HTMLElement } = {};
 			// Contents.
@@ -128,6 +153,9 @@ class Main
 
 			const toggle = <HTMLElement>document.getElementById( 'frame' );
 			if ( data.noframe ) { toggle.classList.remove( 'on' ); }
+
+			const input = <HTMLInputElement>document.getElementById( 'install_url' );
+			input.value = '';
 		} );
 
 		AddClickEvent( 'frame', () =>

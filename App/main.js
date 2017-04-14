@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron = require("electron");
-const fs = require("fs");
 const path = require("path");
+const ConfigManager = require("./config");
+const ThemeManager = require("./theme");
 const PackageInfo = require('./package.json');
 const App = electron.app;
 const BrowserWindow = electron.BrowserWindow;
@@ -14,62 +15,25 @@ console.log(process.versions);
 console.log(App.getPath('userData'));
 class Main {
     constructor() {
-        this.conf = {};
-        this.style = `
-@media screen and (max-width: 300px) {
-	html {
-		font-size: 10px !important;
-	}
-}
-body::-webkit-scrollbar {
-	overflow: hidden;
-	width: 5px;
-	background: #eee;
-	-webkit-border-radius: 3px;
-	border-radius: 3px;
-}
-body::-webkit-scrollbar:horizontal {
-	height: 5px;
-}
-body::-webkit-scrollbar-button {
-	display: none;
-}
-body::-webkit-scrollbar-piece {
-	background: #eee;
-}
-body::-webkit-scrollbar-piece:start {
-	background: #eee;
-}
-body::-webkit-scrollbar-thumb {
-	overflow: hidden;
-	-webkit-border-radius: 3px;
-	border-radius: 3px;
-	background: #333;
-}
-body::-webkit-scrollbar-corner {
-	overflow:hidden;
-	-webkit-border-radius: 3px;
-	border-radius: 3px;
-	background: #333;
-}
-`;
-        this.theme = '';
+        this.config = new ConfigManager(path.join(App.getPath('userData'), 'config.json'));
+        this.theme = new ThemeManager(path.join(App.getPath('userData'), 'theme'));
     }
     init() {
-        this.loadConfig().then((data) => {
-            if (!data.theme) {
-                data.theme = 'Default';
-            }
-            return this.loadTheme(data.theme).then((result) => {
-                this.style = result.style;
-                this.theme = result.theme;
-                return Promise.resolve(data);
+        this.config.load().catch((e) => {
+            return this.config.save().catch(() => {
+                return Promise.resolve({});
             });
-        }).then((conf) => {
-            this.conf = conf;
-            this.setMessage();
-            this.createWindow();
-            this.createTasktray();
+        }).then(() => {
+            return this.theme.init().catch((error) => {
+                return Promise.resolve({});
+            });
+        }).then(() => {
+            return this.theme.load(this.config.getTheme(), true).then((result) => {
+                this.setMessage();
+                this.createWindow();
+                this.createTasktray();
+                return Promise.resolve({});
+            });
         });
     }
     existWindow() { return !!this.win; }
@@ -80,12 +44,12 @@ body::-webkit-scrollbar-corner {
         });
         this.msg.set('about', (event, data) => { this.about(); });
         this.msg.set('get_theme', (event, data) => {
-            this.loadTheme(data).then((result) => {
+            this.theme.load(data).then((result) => {
                 const data = {
                     update: result.update,
                     style: result.style,
                     theme: result.theme,
-                    noframe: !!this.conf.noframe,
+                    noframe: this.config.isNoframe(),
                 };
                 event.sender.send('asynchronous-reply', {
                     type: 'get_theme',
@@ -101,34 +65,73 @@ body::-webkit-scrollbar-corner {
                 });
                 return;
             }
-            const dir = path.join(App.getPath('userData'), 'theme', data.target);
-            const p = [];
-            if (data.style) {
-                p.push(this.saveFile(path.join(dir, 'style.css'), data.style).catch(() => { return Promise.resolve({}); }));
-            }
-            if (data.theme) {
-                p.push(this.saveFile(path.join(dir, 'theme.css'), data.theme).catch(() => { return Promise.resolve({}); }));
-            }
-            return Promise.all(p).then(() => {
+            return this.theme.saveTheme(data.target, data.style, data.theme).then(() => {
                 event.sender.send('asynchronous-reply', {
                     type: 'save_theme',
                     data: { result: true }
                 });
             });
         });
+        this.msg.set('update_theme', (event, data) => {
+            this.theme.check(data).then((data) => {
+                return this.theme.downloadTheme(data).then(() => {
+                    return Promise.resolve(data);
+                });
+            }).then((data) => {
+                const tdata = {
+                    update: true,
+                    style: this.theme.getNowStyle(),
+                    theme: this.theme.getNowTheme(),
+                    noframe: this.config.isNoframe(),
+                };
+                event.sender.send('asynchronous-reply', {
+                    type: 'theme',
+                    data: tdata,
+                });
+            }).catch((error) => {
+                event.sender.send('asynchronous-reply', {
+                    type: 'update_theme',
+                    data: {}
+                });
+            });
+        });
+        this.msg.set('install_theme', (event, data) => {
+            this.theme.downloadThemeInfo(data).then((data) => {
+                return this.theme.downloadTheme(data).then(() => {
+                    return Promise.resolve(data);
+                });
+            }).then((data) => {
+                const config = {
+                    theme: this.config.getTheme(),
+                    list: [],
+                    noframe: this.config.isNoframe(),
+                    install: data.name,
+                };
+                this.theme.list().then((list) => {
+                    config.list = list;
+                    event.sender.send('asynchronous-reply', {
+                        type: 'setting',
+                        data: config,
+                    });
+                });
+            }).catch(() => {
+                event.sender.send('asynchronous-reply', {
+                    type: 'install_theme',
+                    data: {}
+                });
+            });
+        });
         this.msg.set('theme', (event, data) => {
-            this.loadTheme(data).then((result) => {
-                this.style = result.style;
-                this.theme = result.theme;
+            this.theme.load(data, true).then((result) => {
                 if (result.update) {
-                    this.conf.theme = data;
-                    this.saveConfig();
+                    this.config.setTheme(data);
+                    this.config.save();
                 }
                 const tdata = {
                     update: result.update,
-                    style: this.style,
-                    theme: this.theme,
-                    noframe: !!this.conf.noframe,
+                    style: this.theme.getNowStyle(),
+                    theme: this.theme.getNowTheme(),
+                    noframe: this.config.isNoframe(),
                 };
                 event.sender.send('asynchronous-reply', {
                     type: 'theme',
@@ -138,11 +141,12 @@ body::-webkit-scrollbar-corner {
         });
         this.msg.set('setting', (event, data) => {
             const config = {
-                theme: this.conf.theme || 'Default',
+                theme: this.config.getTheme(),
                 list: [],
-                noframe: !!this.conf.noframe,
+                noframe: this.config.isNoframe(),
+                install: '',
             };
-            this.loadThemaList().then((list) => {
+            this.theme.list().then((list) => {
                 config.list = list;
                 event.sender.send('asynchronous-reply', {
                     type: 'setting',
@@ -151,15 +155,15 @@ body::-webkit-scrollbar-corner {
             });
         });
         this.msg.set('frame', (event, data) => {
-            this.conf.noframe = !!data;
-            this.saveConfig().then(() => {
+            this.config.setNoframe(!!data);
+            this.config.save().then(() => {
                 this.restart();
             });
         });
         this.msg.set('top', (event, data) => {
-            this.conf.top = !!data;
-            this.win.setAlwaysOnTop(this.conf.top);
-            this.saveConfig();
+            this.config.setAlwaysTop(!!data);
+            this.win.setAlwaysOnTop(this.config.isAlwaysTop());
+            this.config.save();
         });
         this.msg.set('exit', (event, data) => {
             this.win.close();
@@ -173,31 +177,29 @@ body::-webkit-scrollbar-corner {
             resizable: true,
             skipTaskbar: true,
         };
-        if (this.conf.noframe) {
+        if (this.config.isNoframe()) {
             option.frame = false;
         }
-        if (this.conf.top) {
+        if (this.config.isAlwaysTop()) {
             option.alwaysOnTop = true;
         }
-        if (this.conf.x !== undefined && this.conf.y !== undefined) {
-            option.x = this.conf.x;
-            option.y = this.conf.y;
+        if (this.config.existsPosition()) {
+            option.x = this.config.getX();
+            option.y = this.config.getY();
         }
-        if (this.conf.width !== undefined && this.conf.height !== undefined) {
-            option.width = this.conf.width;
-            option.height = this.conf.height;
+        if (this.config.existsSize()) {
+            option.width = this.config.getWidth();
+            option.height = this.config.getHeight();
         }
         this.win = new BrowserWindow(option);
         this.win.setMenuBarVisibility(false);
         this.win.loadURL('file://' + __dirname + '/index.html');
         this.win.on('close', () => {
             const position = this.win.getPosition();
-            this.conf.x = position[0];
-            this.conf.y = position[1];
+            this.config.setPosition(position[0], position[1]);
             const size = this.win.getSize();
-            this.conf.width = size[0];
-            this.conf.height = size[1];
-            this.saveConfig(true);
+            this.config.setSize(size[0], size[1]);
+            this.config.save(true);
         });
         this.win.on('closed', () => {
         });
@@ -214,170 +216,6 @@ body::-webkit-scrollbar-corner {
         this.tray.setContextMenu(contextMenu);
         this.tray.setToolTip(App.getName());
         this.tray.on('click', () => { this.win.focus(); });
-    }
-    loadFile(file) {
-        return new Promise((resolve, reject) => {
-            fs.readFile(file, 'utf8', (error, data) => {
-                if (error) {
-                    return reject(error);
-                }
-                resolve(data);
-            });
-        });
-    }
-    saveFile(file, data) {
-        return new Promise((resolve, reject) => {
-            fs.writeFile(file, data, (error) => {
-                if (error) {
-                    return reject(error);
-                }
-                resolve({});
-            });
-        });
-    }
-    loadConfig() {
-        return this.loadFile(path.join(App.getPath('userData'), 'config.json')).then((data) => {
-            try {
-                const conf = JSON.parse(data);
-                if (conf) {
-                    if (typeof conf.theme !== 'string') {
-                        conf.theme = 'Default';
-                    }
-                    if (typeof conf.x !== 'number' || typeof conf.y !== 'number') {
-                        delete conf.x;
-                        delete conf.y;
-                    }
-                    if (typeof conf.width !== 'number' || typeof conf.height !== 'number') {
-                        delete conf.width;
-                        delete conf.height;
-                    }
-                    if (typeof conf.noframe !== 'boolean') {
-                        delete conf.noframe;
-                    }
-                    return Promise.resolve(conf);
-                }
-            }
-            catch (e) {
-            }
-            return Promise.reject({});
-        }).then((conf) => {
-            return this.initDefaultTheme().then(() => {
-                return Promise.resolve(conf);
-            });
-        }).catch((e) => {
-            const p = [
-                this.initDefaultTheme().catch(() => { return Promise.resolve({}); }),
-                this.saveConfig().catch(() => { return Promise.resolve({}); }),
-            ];
-            return Promise.all(p).then(() => {
-                return Promise.resolve({});
-            });
-        });
-    }
-    saveConfig(sync = false) {
-        const conf = this.conf;
-        const file = path.join(App.getPath('userData'), 'config.json');
-        if (sync) {
-            fs.writeFileSync(file, JSON.stringify(conf));
-            return Promise.resolve({});
-        }
-        return this.saveFile(file, JSON.stringify(conf));
-    }
-    makeDirectory(dir) {
-        return new Promise((resolve, reject) => {
-            fs.mkdir(dir, (error) => {
-                if (error && error.code !== 'EEXIST') {
-                    return reject({ error: error });
-                }
-                resolve({ exsists: !!error });
-            });
-        });
-    }
-    initDefaultTheme() {
-        const sdir = path.join(App.getPath('userData'), 'theme');
-        return this.makeDirectory(sdir).then(() => {
-            const dir = path.join(sdir, 'Default');
-            return this.makeDirectory(dir).then(() => {
-                const p = [
-                    this.makeDirectory(path.join(sdir, 'User')),
-                    this.saveFile(path.join(dir, 'style.css'), this.style),
-                    this.saveFile(path.join(dir, 'theme.css'), ''),
-                ];
-                return Promise.all(p);
-            });
-        });
-    }
-    loadTheme(theme) {
-        const data = { style: '', theme: '', update: true };
-        const dir = path.join(App.getPath('userData'), 'theme', theme);
-        if (!theme || !ExistsDirectory(dir)) {
-            return Promise.resolve({ style: this.style, theme: this.theme, update: false });
-        }
-        const p = [
-            this.loadFile(path.join(dir, 'style.css')).then((style) => {
-                data.style = style || '';
-                return Promise.resolve({});
-            }).catch(() => { return Promise.resolve({}); }),
-            this.loadFile(path.join(dir, 'theme.css')).then((style) => {
-                data.theme = style || '';
-                return Promise.resolve({});
-            }).catch(() => { return Promise.resolve({}); }),
-        ];
-        return Promise.all(p).then(() => {
-            return Promise.resolve(data);
-        });
-    }
-    loadThemaList() {
-        const sdir = path.join(App.getPath('userData'), 'theme');
-        return new Promise((resolve, reject) => {
-            fs.readdir(sdir, (error, dirs) => {
-                if (error) {
-                    return resolve([]);
-                }
-                resolve(dirs.filter((item) => {
-                    if (item.match(/^\./)) {
-                        return false;
-                    }
-                    return ExistsDirectory(path.join(sdir, item));
-                }));
-            });
-        }).then((list) => {
-            const p = [];
-            list.forEach((thema) => {
-                p.push(this.loadFile(path.join(sdir, thema, 'config.json')).then((data) => {
-                    try {
-                        const config = JSON.parse(data);
-                        if (typeof config !== 'object') {
-                            return Promise.reject({});
-                        }
-                        return Promise.resolve(config);
-                    }
-                    catch (e) { }
-                    return Promise.reject({});
-                }).catch((error) => {
-                    return Promise.resolve({});
-                }).then((_data) => {
-                    const data = _data;
-                    if (!data.version) {
-                        data.version = 0;
-                    }
-                    if (!data.name) {
-                        data.name = thema;
-                    }
-                    if (!data.author) {
-                        data.author = 'Unknown';
-                    }
-                    if (!data.url) {
-                        data.url = '';
-                    }
-                    if (!data.info) {
-                        data.info = '';
-                    }
-                    return Promise.resolve(data);
-                }));
-            });
-            return Promise.all(p);
-        });
     }
     about() {
         const list = [
@@ -425,16 +263,6 @@ class Message {
     set(key, func, sync = false) {
         this[sync ? 'eventsSync' : 'eventsAsync'][key] = func;
     }
-}
-function ExistsDirectory(dir) {
-    try {
-        const stat = fs.statSync(dir);
-        if (stat && stat.isDirectory()) {
-            return true;
-        }
-    }
-    catch (e) { }
-    return false;
 }
 const main = new Main();
 function init() {

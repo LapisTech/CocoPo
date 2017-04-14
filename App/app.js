@@ -31,16 +31,6 @@ class Main {
                 twitter.value = data.style;
             }
         });
-        this.msg.set('get_theme', (event, data) => {
-            const cocopo = document.getElementById('edit_cocopo_theme');
-            const twitter = document.getElementById('edit_twitter_style');
-            if (cocopo) {
-                cocopo.value = data.theme;
-            }
-            if (twitter) {
-                twitter.value = data.style;
-            }
-        });
         AddClickEvent('save_theme', (e) => {
             const data = {
                 target: GetSelectedItem('themelist'),
@@ -58,6 +48,24 @@ class Main {
         this.msg.set('save_theme', (event, data) => {
             HideElement('theme_editor', true);
         });
+        AddClickEvent('update_theme', () => {
+            this.msg.send('update_theme', GetSelectedItem('themelist') || 'Default');
+        });
+        this.msg.set('update_theme', (event, data) => {
+            alert('No update.');
+        });
+        AddClickEvent('install_theme', () => {
+            const input = document.getElementById('install_url');
+            const url = input.value;
+            if (!url.match(/^https{0,1}\:\/\//)) {
+                alert('This data is not URL.');
+                return;
+            }
+            this.msg.send('install_theme', url);
+        });
+        this.msg.set('install_theme', (event, data) => {
+            alert('Install error.');
+        });
         AddClickEvent('select_theme', () => {
             this.msg.send('theme', GetSelectedItem('themelist') || 'Default');
         });
@@ -68,6 +76,9 @@ class Main {
         this.msg.set('setting', (event, data) => {
             const select = document.getElementById('themelist');
             RemoveAllChildren(select);
+            if (data.install) {
+                alert('Install Success: ' + data.install);
+            }
             const elms = {};
             elms['version'] = document.getElementById('theme_version');
             elms['author'] = document.getElementById('theme_author');
@@ -93,6 +104,8 @@ class Main {
             if (data.noframe) {
                 toggle.classList.remove('on');
             }
+            const input = document.getElementById('install_url');
+            input.value = '';
         });
         AddClickEvent('frame', () => {
             const toggle = document.getElementById('frame');

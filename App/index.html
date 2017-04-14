@@ -93,10 +93,11 @@ header button, .setting_header button {
 #save_theme { width: 100%; }
 #setting::before { content: "\2699"; /* U+2699 &#9881; */ }
 #close::before { content: "\274C"; /* U+2699 &#10060; */ }
-/*#update_theme::before { content: "Update"; }*/
+#update_theme::before { content: "Update"; }
 #open_userdir::before { content: "Open"; }
 #edit_theme::before { content: "Edit"; }
 #select_theme::before { content: "Select"; }
+#install_theme::before { content: "Install"; }
 #save_theme::before { content: "Save"; }
 #update_frame::before { content: "Save"; }
 #open_about::before { content: "Open"; }
@@ -140,7 +141,7 @@ section {
 	width: 100%;
 	height: 1rem;
 }
-h2, h3 {
+h2, h3, h4 {
 	text-align: center;
 }
 select {
@@ -173,6 +174,8 @@ dd {
 }
 textarea {
 	height: 8rem;
+}
+input {
 }
 .hide {
 	display: none;
@@ -238,10 +241,15 @@ textarea {
 			<select id="themelist" class="baseColor2 mainColor"></select>
 			<dl class="box mainBorderColor">
 				<dt>Info:</dt><dd id="theme_info"></dd>
-				<dt>URL:</dt><dd id="theme_url"></dd><dd><button id="update_theme"></button></dd>
+				<dt>URL:</dt><dd id="theme_url"></dd><dd><button id="update_theme" class="hide"></button></dd>
 				<dt>Author:</dt><dd id="theme_author"></dd>
 				<dt>Version:</dt><dd id="theme_version"></dd>
 				<dt><button id="edit_theme"></button><button id="select_theme"></button></dt>
+			</dl>
+			<h2>Install theme</h2>
+			<dl class="box mainBorderColor">
+				<dt><input type="text" class="box mainBorderColor mainColor" id="install_url" placeholder="URL"></dt>
+				<dt class="single"><button id="install_theme"></button></dt>
 			</dl>
 		</div>
 		<div>
