@@ -603,7 +603,7 @@ function ExistsDirectory( dir: string ): boolean
 	return false;
 }
 
-function _Get( resolve: ( value?: {} | PromiseLike<{}> | undefined ) => void, reject: ( reason: any ) => void )
+/*function _Get( resolve: ( value?: {} | PromiseLike<{}> | undefined ) => void, reject: ( reason: any ) => void )
 {
 	return ( result: http.IncomingMessage ) =>
 	{
@@ -654,7 +654,7 @@ function GetThemeInfo( url: string )
 
 function DownloadTheme( data: ThemeData )
 {
-	const baseurl = data.url.replace( /\/[\/]*/, '' );
+	const baseurl = data.url.replace( /\/[\/]*       /, '' );
 	const p =
 	[
 		Get( data.style || baseurl + '/style.css' ).catch( ( error ) =>
@@ -677,7 +677,7 @@ function DownloadTheme( data: ThemeData )
 	{
 
 	} );
-}
+}*/
 
 // ======================================== //
 // Start                                    //
