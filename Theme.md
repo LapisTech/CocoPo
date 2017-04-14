@@ -32,9 +32,15 @@ CocoPoの見た目で変更できるのはCocoPo本体とWebViewで開いてい�
 
 ## テーマのインストール
 
-外部のテーマをインストールできるようになる予定です。
+外部のテーマをインストールできます。
 
 テーマはテーマ情報が入ったJSONのURLを与える形になります。
+
+例えばサンプルのCocoPoDarkは以下のURLです。
+
+```
+http://lapis.tech/CocoPo/CocoPoDark/theme.json
+```
 
 ## テーマの作成
 
