@@ -242,7 +242,8 @@ class InMenu extends MenuClass {
 class UrlMenu extends MenuClass {
     init(url) {
         this.url = url;
-        this.addItem('Copy', () => { this.copy(); });
+        this.addItem('Copy', () => { this.copyUrl(); });
+        this.addItem('Open', () => { this.openUrl(); });
         url.addEventListener('mousedown', (e) => {
             switch (e.button) {
                 case 1:
@@ -252,8 +253,11 @@ class UrlMenu extends MenuClass {
             }
         }, false);
     }
-    copy() {
+    copyUrl() {
         electron.clipboard.writeText(this.url.value);
+    }
+    openUrl() {
+        electron.shell.openExternal(this.url.value);
     }
 }
 const IpcRenderer = require('electron').ipcRenderer;

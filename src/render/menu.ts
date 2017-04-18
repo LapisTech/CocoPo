@@ -48,7 +48,8 @@ class UrlMenu extends MenuClass
 	public init( url: HTMLInputElement )
 	{
 		this.url = url;
-		this.addItem( 'Copy', () => { this.copy(); } );
+		this.addItem( 'Copy', () => { this.copyUrl(); } );
+		this.addItem( 'Open', () => { this.openUrl(); } );
 
 		url.addEventListener( 'mousedown', ( e ) =>
 		{
@@ -63,9 +64,14 @@ class UrlMenu extends MenuClass
 		}, false );
 	}
 
-	public copy()
+	public copyUrl()
 	{
 		//this.menu.popup( electron.remote.getCurrentWindow() );
 		electron.clipboard.writeText( this.url.value );
+	}
+
+	public openUrl()
+	{
+		electron.shell.openExternal( this.url.value );
 	}
 }
