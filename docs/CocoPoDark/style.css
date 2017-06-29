@@ -14,6 +14,7 @@ header > div > div {
 
 header > div > div > div > div > div,
 main > div > div > div > div,
+nav[role="navigation"],
 header > div > div > div > nav {
 	background-color: #333238 !important;
 }
@@ -27,6 +28,7 @@ div[role="article"] > div > div > div > div > a > div > div > div > div > span {
 	color: #a7a8b7 !important;
 }
 
+header > div > div > div > div > div > div,
 div[role="presentation"] {
 	background-color: transparent !important;
 }
