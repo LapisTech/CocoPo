@@ -21,9 +21,10 @@ header > div > div > div > nav {
 }
 
 div[dir="auto"],
-div[role="article"] div,
 div[role="article"] a,
-div[role="article"] span {
+div[role="article"] div > span,
+section[role="region"] a,
+section[role="region"] div > span {
 	color: #a7a8b7 !important;
 }
 
