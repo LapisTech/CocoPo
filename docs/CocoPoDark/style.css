@@ -21,6 +21,7 @@ header > div > div > div > nav {
 }
 
 div[dir="auto"],
+a[role="link"] span,
 div[role="article"] a,
 div[role="article"] div > span,
 section[role="region"] a,
