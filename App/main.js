@@ -13,13 +13,14 @@ const IpcMain = electron.ipcMain;
 const Dialog = electron.dialog;
 console.log(process.versions);
 console.log(App.getPath('userData'));
+process.on('unhandledRejection', console.dir);
 class Main {
     constructor() {
         this.config = new ConfigManager(path.join(App.getPath('userData'), 'config.json'));
         this.theme = new ThemeManager(path.join(App.getPath('userData'), 'theme'));
     }
     init() {
-        this.config.load().catch((e) => {
+        return this.config.load().catch((e) => {
             return this.config.save().catch(() => {
                 return Promise.resolve({});
             });

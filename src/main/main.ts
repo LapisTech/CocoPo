@@ -15,6 +15,7 @@ const Dialog        = electron.dialog;
 
 console.log( process.versions );
 console.log( App.getPath( 'userData' ) );
+//process.on(<any>'unhandledRejection', console.dir);
 
 class Main
 {
@@ -33,7 +34,7 @@ class Main
 
 	public init()
 	{
-		this.config.load().catch( ( e ) =>
+		return this.config.load().catch( ( e ) =>
 		{
 			// Init config & Default style.
 			return this.config.save().catch( () =>
@@ -256,7 +257,7 @@ class Main
 
 	private createWindow()
 	{
-		const option: Electron.BrowserWindowOptions =
+		const option: Electron.BrowserWindowConstructorOptions =
 		{
 			width: 250,
 			height: 480,
@@ -374,24 +375,34 @@ class Main
 	}
 }
 
+// TODO: Electron.IpcMainEvent
+interface IpcMainEvent
+{
+	returnValue: any;
+	sender:
+	{
+		send: ( channel: string, data: any ) => void,
+	}
+}
+
 class Message
 {
-	private eventsAsync: { [ keys: string ]: ( event: Electron.IpcMainEvent, arg: any ) => void };
-	private eventsSync: { [ keys: string ]: ( event: Electron.IpcMainEvent, arg: any ) => void };
+	private eventsAsync: { [ keys: string ]: ( event: /*Electron.*/IpcMainEvent, arg: any ) => void };
+	private eventsSync: { [ keys: string ]: ( event: /*Electron.*/IpcMainEvent, arg: any ) => void };
 
 	constructor()
 	{
 		this.eventsAsync = {};
 		this.eventsSync = {};
 
-		IpcMain.on( 'asynchronous-message', ( event, arg: { type: string, data: any } ) =>
+		IpcMain.on( 'asynchronous-message', ( event: /*Electron.*/IpcMainEvent, arg: { type: string, data: any } ) =>
 		{
 			if ( !this.eventsAsync[ arg.type ] ) { return; }
 			this.eventsAsync[ arg.type ]( event, arg.data );
 			//event.sender.send( 'asynchronous-reply', '' );
 		} );
 
-		IpcMain.on( 'synchronous-message', ( event, arg ) =>
+		IpcMain.on( 'synchronous-message', ( event: /*Electron.*/IpcMainEvent, arg: { type: string, data: any } ) =>
 		{
 			if ( !this.eventsSync[ arg.type ] ) { return; }
 			this.eventsSync[ arg.type ]( event, arg.data );
@@ -399,7 +410,7 @@ class Message
 		} );
 	}
 
-	public set( key: string, func: ( event: Electron.IpcMainEvent, arg: any ) => void, sync = false )
+	public set( key: string, func: ( event: /*Electron.*/IpcMainEvent, arg: any ) => void, sync = false )
 	{
 		this[ sync ? 'eventsSync' : 'eventsAsync' ][ key ] = func;
 	}

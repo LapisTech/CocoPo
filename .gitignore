@@ -44,3 +44,5 @@ tmp/
 *.txt
 *.sublime-workspace
 *.zip
+
+package-lock.json

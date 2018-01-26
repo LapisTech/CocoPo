@@ -1,3 +1,5 @@
+/// <reference path="../../node_modules/electron/electron.d.ts" />
+
 const electron = require( 'electron' );
 
 class MenuClass

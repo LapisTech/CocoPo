@@ -296,7 +296,7 @@ function Get( url: string ): Promise<string>
 
 		if ( url.match( /^https\:\/\// ) )
 		{
-			req = https.get( url, _Get( resolve, reject ) );
+			req = https.get( <any>url, _Get( resolve, reject ) );// TODO: delete any.
 		} else if ( url.match( /^http\:\/\// ) )
 		{
 			req = http.get( url, _Get( resolve, reject ) );
