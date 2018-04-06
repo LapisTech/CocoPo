@@ -39,7 +39,7 @@ CocoPoの見た目で変更できるのはCocoPo本体とWebViewで開いてい�
 例えばサンプルのCocoPoDarkは以下のURLです。
 
 ```
-http://lapis.tech/CocoPo/CocoPoDark/theme.json
+https://lapistech.github.io/CocoPo/CocoPoDark/theme.json
 ```
 
 ## テーマの作成

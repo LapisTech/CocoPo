@@ -19,6 +19,16 @@ class ConfigManager {
     setSize(width, height) { this.conf.width = width; this.conf.height = height; }
     getWidth() { return this.conf.width || 0; }
     getHeight() { return this.conf.height || 0; }
+    getAutoReloadTime() { return this.conf.autoreload || 0; }
+    setAutoReloadTime(time = 0) {
+        if (time < 0) {
+            time = 0;
+        }
+        if (time && time < 60) {
+            time = 60;
+        }
+        this.conf.autoreload = time;
+    }
     load() {
         return fs.loadFile(this.file).then((data) => {
             try {
@@ -37,6 +47,9 @@ class ConfigManager {
                     }
                     if (typeof conf.noframe !== 'boolean') {
                         delete conf.noframe;
+                    }
+                    if (typeof conf.autoreload !== 'number' || conf.autoreload < 0) {
+                        conf.autoreload = 0;
                     }
                     this.conf = conf;
                     return Promise.resolve(conf);

@@ -1,8 +1,8 @@
 {
   "name": "cocopo",
   "appname": "CocoPo",
-  "site": "http://lapis.tech/CocoPo/",
-  "version": "1.3.2",
+  "site": "https://lapistech.github.io/CocoPo/",
+  "version": "1.4.0",
   "description": "Twitter Lite in Electron.",
   "main": "main.js",
   "scripts": {},

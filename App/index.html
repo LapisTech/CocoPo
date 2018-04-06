@@ -101,6 +101,7 @@ header button, .setting_header button {
 #save_theme::before { content: "Save"; }
 #update_frame::before { content: "Save"; }
 #open_about::before { content: "Open"; }
+#autoreload_update::before { content: "Save"; }
 article {
 	display: block;
 	width: 100%;
@@ -231,6 +232,11 @@ input {
 	<div class="page sc">
 		<div>
 			<h2>Setting</h2>
+			<dl class="box mainBorderColor">
+				<dt>Auto update</dt>
+				<dd><div class="toggle" id="autoreload_toggle"></div></dd>
+				<dt class="single"><button id="autoreload_update"></button></dt>
+			</dl>
 			<dl class="box mainBorderColor">
 				<dt>Open user directory</dt>
 				<dt class="single"><button id="open_userdir"></button></dt>

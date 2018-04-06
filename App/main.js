@@ -13,7 +13,6 @@ const IpcMain = electron.ipcMain;
 const Dialog = electron.dialog;
 console.log(process.versions);
 console.log(App.getPath('userData'));
-process.on('unhandledRejection', console.dir);
 class Main {
     constructor() {
         this.config = new ConfigManager(path.join(App.getPath('userData'), 'config.json'));
@@ -40,6 +39,20 @@ class Main {
     existWindow() { return !!this.win; }
     setMessage() {
         this.msg = new Message();
+        this.msg.set('autoreload', (event, data) => {
+            if (data !== undefined) {
+                this.config.setAutoReloadTime(data ? 60 : 0);
+            }
+            this.config.save().then(() => {
+                if (data !== undefined) {
+                    return;
+                }
+                event.sender.send('asynchronous-reply', {
+                    type: 'autoreload',
+                    data: { result: this.config.getAutoReloadTime() },
+                });
+            });
+        });
         this.msg.set('userdir', (event, data) => {
             electron.shell.openExternal(App.getPath('userData'));
         });

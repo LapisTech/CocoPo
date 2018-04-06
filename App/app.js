@@ -15,6 +15,14 @@ class Main {
         const page = document.getElementById('setting_page');
         const close = document.getElementById('close');
         AddClickEvent('close', () => { page.classList.add('hide'); });
+        AddClickEvent('autoreload_update', () => {
+            const toggle = document.getElementById('autoreload_toggle');
+            this.msg.send('autoreload', toggle.classList.contains('on'));
+        });
+        AddClickEvent('autoreload_toggle', () => {
+            const toggle = document.getElementById('autoreload_toggle');
+            toggle.classList.toggle('on');
+        });
         AddClickEvent('open_userdir', () => { this.msg.send('userdir', {}); });
         AddClickEvent('open_about', () => { this.msg.send('about', {}); });
         AddClickEvent('edit_theme', (e) => {
@@ -125,7 +133,7 @@ class Main {
             webview.addEventListener('did-navigate-in-page', (e) => {
                 const url = e.url;
                 if (this.isTwitterURL(url)) {
-                    this.updateURLBar(url);
+                    this.updateURLBar(this.changeMobile(url));
                 }
                 else {
                     wb.stop();
@@ -133,6 +141,7 @@ class Main {
                 }
             });
             this.msg.send('theme', '');
+            this.msg.send('autoreload', undefined);
         });
         this.msg.set('theme', (event, data) => {
             if (data.update) {
@@ -146,9 +155,91 @@ class Main {
             RemoveAllChildren(theme);
             theme.appendChild(document.createTextNode(data.theme));
         });
+        this.msg.set('autoreload', (event, data) => {
+            const toggle = document.getElementById('autoreload_toggle');
+            toggle.classList[0 < data.result ? 'add' : 'remove']('on');
+            this.initAutoUpdate(webview, data.result);
+        });
+    }
+    initAutoUpdate(webview, time) {
+        if (this.reloadtimer) {
+            clearInterval(this.reloadtimer);
+        }
+        if (time <= 0) {
+            return;
+        }
+        this.initScroll(webview);
+        this.reloadtimer = setInterval(() => {
+            if (this.url.value !== 'https://mobile.twitter.com/home') {
+                return;
+            }
+            this.getScroll(webview).then((scroll) => {
+                if (0 < scroll) {
+                    return;
+                }
+                this.pushTwitterButton(webview, 1);
+                this.pushTwitterButton(webview, 0);
+                this.resetScroll(webview);
+                setTimeout(() => {
+                    this.checkScroll(webview).then((sclolled) => {
+                        if (this.url.value !== 'https://mobile.twitter.com/home' || sclolled) {
+                            return;
+                        }
+                        this.pushTwitterButton(webview, 0);
+                    });
+                }, 3000);
+            });
+        }, time * 1000);
+    }
+    execJSInWebView(webview, code) {
+        return new Promise((resolve, reject) => {
+            webview.executeJavaScript(code, false, (result) => {
+                resolve(result);
+            });
+        });
+    }
+    initScroll(webview) {
+        this.execJSInWebView(webview, 'typeof CocoPo;').then((type) => {
+            if (type !== 'undefined') {
+                return;
+            }
+            return this.execJSInWebView(webview, 'var CocoPo={scroll:false};document.addEventListener("wheel",()=>{CocoPo.scroll=true;});').then((type) => {
+                console.log('Set scroll checker.');
+            });
+        });
+    }
+    getScroll(webview) {
+        return this.execJSInWebView(webview, 'document.body.scrollTop;').then((scroll) => {
+            if (typeof scroll === 'string') {
+                scroll = parseInt(scroll);
+            }
+            if (typeof scroll !== 'number') {
+                throw scroll;
+            }
+            return scroll;
+        });
+    }
+    checkScroll(webview) {
+        return this.execJSInWebView(webview, 'CocoPo.scroll;').then((scroll) => {
+            return !!scroll;
+        });
+    }
+    resetScroll(webview) {
+        return this.execJSInWebView(webview, 'CocoPo.scroll=false;CocoPo.scroll;');
+    }
+    pushTwitterButton(webview, button) {
+        return this.execJSInWebView(webview, 'document.querySelector("header").clientHeight;').then((height) => {
+            const x = webview.clientWidth / 8 * (button * 2 + 1);
+            const y = height / 3 * 2;
+            webview.sendInputEvent({ type: 'mouseDown', x: x, y: y, button: 'left', clickCount: 1 });
+            webview.sendInputEvent({ type: 'mouseUp', x: x, y: y, button: 'left', clickCount: 1 });
+        });
     }
     isTwitterURL(url) {
         return url.match(/^https+:\/\/[^\/]*\.twitter.com\//) !== null;
+    }
+    changeMobile(url) {
+        return url.replace(/^https+:\/\/[^\/]*\.twitter.com\//, 'https://mobile.twitter.com/');
     }
     openURL(url) {
         electron.shell.openExternal(url);
@@ -242,8 +333,8 @@ class InMenu extends MenuClass {
 class UrlMenu extends MenuClass {
     init(url) {
         this.url = url;
-        this.addItem('Copy', () => { this.copyUrl(); });
-        this.addItem('Open', () => { this.openUrl(); });
+        this.addItem('Copy URL', () => { this.copyUrl(); });
+        this.addItem('Open URL', () => { this.openUrl(); });
         url.addEventListener('mousedown', (e) => {
             switch (e.button) {
                 case 1:

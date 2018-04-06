@@ -1,6 +1,6 @@
 {
   "name": "cocopo",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "rbuild": "tsc --project src/render",
     "mbuild": "tsc --project src/main",
     "start": "electron App",
-    "release": "electron-packager App CocoPo --platform=win32 --arch=x64 --electron-version 1.7.11 --icon=icon.ico --overwrite",
+    "release": "electron-packager App CocoPo --platform=win32 --arch=x64 --electron-version 1.8.2 --icon=icon.ico --overwrite",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Hiroki",

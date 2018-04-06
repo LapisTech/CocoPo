@@ -9,6 +9,7 @@ interface Config
 	height?: number,
 	noframe?: boolean,
 	top?: boolean,
+	autoreload?: number,
 }
 
 class ConfigManager
@@ -41,6 +42,14 @@ class ConfigManager
 	public getWidth() { return this.conf.width || 0; }
 	public getHeight() { return this.conf.height || 0; }
 
+	public getAutoReloadTime() { return this.conf.autoreload || 0; }
+	public setAutoReloadTime( time: number = 0 )
+	{
+		if ( time < 0 ) { time = 0; }
+		if ( time && time < 60 ) { time = 60; }
+		this.conf.autoreload = time;
+	}
+
 	public load(): Promise<Config>
 	{
 		return fs.loadFile( this.file ).then( ( data ): Promise<Config> =>
@@ -67,6 +76,10 @@ class ConfigManager
 					if ( typeof conf.noframe !== 'boolean' )
 					{
 						delete conf.noframe;
+					}
+					if ( typeof conf.autoreload !== 'number' || conf.autoreload < 0 )
+					{
+						conf.autoreload = 0;
 					}
 					this.conf = conf;
 					return Promise.resolve( <Config>conf );

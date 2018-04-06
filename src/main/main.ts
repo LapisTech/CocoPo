@@ -67,6 +67,23 @@ class Main
 	{
 		this.msg = new Message();
 
+		this.msg.set( 'autoreload', ( event, data ) =>
+		{
+			if ( data !== undefined )
+			{
+				this.config.setAutoReloadTime( data ? 60 : 0 );
+			}
+			this.config.save().then( () =>
+			{
+				if ( data !== undefined ) { return; }
+				event.sender.send( 'asynchronous-reply',
+				{
+					type: 'autoreload',
+					data: { result: this.config.getAutoReloadTime() },
+				} );
+			} );
+		} );
+
 		this.msg.set( 'userdir', ( event, data ) =>
 		{
 			electron.shell.openExternal( App.getPath( 'userData' ) );

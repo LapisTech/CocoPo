@@ -50,8 +50,8 @@ class UrlMenu extends MenuClass
 	public init( url: HTMLInputElement )
 	{
 		this.url = url;
-		this.addItem( 'Copy', () => { this.copyUrl(); } );
-		this.addItem( 'Open', () => { this.openUrl(); } );
+		this.addItem( 'Copy URL', () => { this.copyUrl(); } );
+		this.addItem( 'Open URL', () => { this.openUrl(); } );
 
 		url.addEventListener( 'mousedown', ( e ) =>
 		{

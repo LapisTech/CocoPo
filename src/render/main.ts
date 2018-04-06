@@ -4,6 +4,7 @@ class Main
 	private menu: InMenu;
 	private umenu: UrlMenu;
 	private url: HTMLInputElement;
+	private reloadtimer: NodeJS.Timer;
 
 	constructor()
 	{
@@ -15,7 +16,7 @@ class Main
 		this.menu = new InMenu();
 		this.umenu = new UrlMenu();
 
-		this.url  = <HTMLInputElement>document.getElementById( 'url' );
+		this.url = <HTMLInputElement>document.getElementById( 'url' );
 
 		this.menu.init( this.msg );
 		this.umenu.init( this.url );
@@ -31,6 +32,17 @@ class Main
 
 		const close = <HTMLElement>document.getElementById( 'close' );
 		AddClickEvent( 'close', () => { page.classList.add( 'hide' ); } );
+
+		AddClickEvent( 'autoreload_update', () =>
+		{
+			const toggle = <HTMLElement>document.getElementById( 'autoreload_toggle' );
+			this.msg.send( 'autoreload', toggle.classList.contains( 'on' ) );
+		} );
+		AddClickEvent( 'autoreload_toggle', () =>
+		{
+			const toggle = <HTMLElement>document.getElementById( 'autoreload_toggle' );
+			toggle.classList.toggle( 'on' );
+		} );
 
 		AddClickEvent( 'open_userdir', () => { this.msg.send( 'userdir', {} ); } );
 		AddClickEvent( 'open_about', () => { this.msg.send( 'about', {} ); } );
@@ -188,7 +200,7 @@ class Main
 				const url = (<any>e).url;
 				if ( this.isTwitterURL( url ) )
 				{
-					this.updateURLBar( url );
+					this.updateURLBar( this.changeMobile( url ) );
 				} else
 				{
 					wb.stop();
@@ -214,6 +226,7 @@ class Main
 
 
 			this.msg.send( 'theme', '' );
+			this.msg.send( 'autoreload', undefined );
 		} );
 
 		this.msg.set( 'theme', ( event, data: Theme ) =>
@@ -225,11 +238,117 @@ class Main
 			RemoveAllChildren( theme );
 			theme.appendChild( document.createTextNode( data.theme ) );
 		} );
+
+		this.msg.set( 'autoreload', ( event, data: { result: number } ) =>
+		{
+			const toggle = <HTMLElement>document.getElementById( 'autoreload_toggle' );
+			toggle.classList[ 0 < data.result ? 'add' : 'remove' ]( 'on' );
+			// Auto reload.
+			this.initAutoUpdate( <any>webview, data.result );
+		} );
 	}
 
-	private isTwitterURL( url: string ): boolean
+	private initAutoUpdate( webview: Electron.webContents, time: number )//TODO: webview
+	{
+		if ( this.reloadtimer )
+		{
+			clearInterval( this.reloadtimer );
+		}
+		if ( time <= 0 ) { return; }
+
+		this.initScroll( webview );
+
+		this.reloadtimer = setInterval( () =>
+		{
+			if ( this.url.value !== 'https://mobile.twitter.com/home' ) { return; }
+			this.getScroll( webview ).then( ( scroll ) =>
+			{
+				if ( 0 < scroll ) { return; }
+				// Reload.
+				this.pushTwitterButton( webview, 1 );
+				this.pushTwitterButton( webview, 0 );
+
+				// Reset scroll.
+				this.resetScroll( webview );
+
+				// Move top.
+				setTimeout( () =>
+				{
+					this.checkScroll( webview ).then( ( sclolled ) =>
+					{
+						if ( this.url.value !== 'https://mobile.twitter.com/home' || sclolled ) { return; }
+						this.pushTwitterButton( webview, 0 );
+					} );
+				}, 3000 );
+			} );
+		}, time * 1000 );
+	}
+
+	private execJSInWebView( webview: Electron.webContents, code: string ): Promise<any>
+	{
+		return new Promise( ( resolve, reject ) =>
+		{
+			webview.executeJavaScript( code, false, ( result ) =>
+			{
+				resolve( result );
+			} );
+		} );
+	}
+
+	private initScroll( webview: Electron.webContents )
+	{
+		this.execJSInWebView( webview, 'typeof CocoPo;' ).then( ( type ) =>
+		{
+			if ( type !== 'undefined' ) { return; }
+			return this.execJSInWebView( webview, 'var CocoPo={scroll:false};document.addEventListener("wheel",()=>{CocoPo.scroll=true;});' ).then( ( type ) =>
+			{
+				console.log( 'Set scroll checker.' );
+			} );
+		} );
+	}
+
+	private getScroll( webview: Electron.webContents )
+	{
+		return this.execJSInWebView( webview, 'document.body.scrollTop;' ).then( ( scroll ) =>
+		{
+			if ( typeof scroll === 'string' ) { scroll = parseInt( scroll ); }
+			if ( typeof scroll !== 'number' ) { throw scroll; }
+			return scroll;
+		} );
+	}
+
+	private checkScroll( webview: Electron.webContents ): Promise<boolean>
+	{
+		return this.execJSInWebView( webview, 'CocoPo.scroll;' ).then( ( scroll ) =>
+		{
+			return !!scroll;
+		} );
+	}
+
+	private resetScroll( webview: Electron.webContents )
+	{
+		return this.execJSInWebView( webview, 'CocoPo.scroll=false;CocoPo.scroll;' );
+	}
+
+	private pushTwitterButton( webview: Electron.webContents, button: number )
+	{
+		return this.execJSInWebView( webview, 'document.querySelector("header").clientHeight;' ).then( ( height ) =>
+		{
+			const x = (<any>webview).clientWidth / 8 * ( button * 2 + 1 );
+			const y = height / 3 * 2;
+			webview.sendInputEvent( <any>{ type: 'mouseDown', x: x, y: y, button:'left', clickCount: 1 } );
+			webview.sendInputEvent( <any>{ type: 'mouseUp', x: x, y: y, button:'left', clickCount: 1 } );
+		} );
+	}
+
+	private isTwitterURL( url: string )
 	{
 		return url.match( /^https+:\/\/[^\/]*\.twitter.com\// ) !== null;
+	}
+
+	private changeMobile( url: string )
+	{
+		return url.replace( /^https+:\/\/[^\/]*\.twitter.com\//, 'https://mobile.twitter.com/' );
 	}
 
 	public openURL( url: string )
