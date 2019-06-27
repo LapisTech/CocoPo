@@ -283,6 +283,12 @@ class Main
 			//nodeIntegration: false,
 			//transparent: true,
 			skipTaskbar: true,
+			webPreferences:
+			{
+				devTools: true,
+				nodeIntegration: true,
+				webviewTag: true,
+			},
 		};
 
 		if ( this.config.isNoframe() ) { option.frame = false; }
@@ -306,6 +312,8 @@ class Main
 		this.win.setMenuBarVisibility( false );
 
 		this.win.loadURL( 'file://' + __dirname + '/index.html' );
+
+		//setTimeout( () => { this.win.webContents.openDevTools(); }, 5000 );
 
 		this.win.on( 'close', () =>
 		{

@@ -1,18 +1,12 @@
 {
 	"compilerOptions": {
-		"outFile": "../../App/app.js",
-		"module": "system",
-		"moduleResolution": "node",
-		"target": "es6",
-		"lib": [
-			"dom",
-			"es2017"
-		],
+		"outDir": "../../App/",
+		"module": "commonjs",
+		"target": "es2017",
 		"strictNullChecks": true,
 		"noImplicitAny": true,
 		"removeComments": true,
-		"preserveConstEnums": false,
-		"sourceMap": false
+		"preserveConstEnums": false
 	},
 	"include": [
 		"./**/*.ts"

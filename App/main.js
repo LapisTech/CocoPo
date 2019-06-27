@@ -190,6 +190,11 @@ class Main {
             frame: true,
             resizable: true,
             skipTaskbar: true,
+            webPreferences: {
+                devTools: true,
+                nodeIntegration: true,
+                webviewTag: true,
+            },
         };
         if (this.config.isNoframe()) {
             option.frame = false;

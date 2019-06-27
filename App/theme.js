@@ -6,6 +6,8 @@ const fs = require("./fs");
 class ThemeManager {
     constructor(dir) {
         this.style = `
+header[role="banner"] > div { width: 20px; }
+header[role="banner"] > div > div > div { width: 20px; padding: 0; }
 @media screen and (max-width: 300px) {
 	html {
 		font-size: 10px !important;

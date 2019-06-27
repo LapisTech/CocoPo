@@ -1,3 +1,5 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 class Main {
     constructor() {
     }
@@ -227,13 +229,13 @@ class Main {
     resetScroll(webview) {
         return this.execJSInWebView(webview, 'CocoPo.scroll=false;CocoPo.scroll;');
     }
-    pushTwitterButton(webview, button) {
-        return this.execJSInWebView(webview, 'document.querySelector("header").clientHeight;').then((height) => {
-            const x = webview.clientWidth / 8 * (button * 2 + 1);
-            const y = height / 3 * 2;
-            webview.sendInputEvent({ type: 'mouseDown', x: x, y: y, button: 'left', clickCount: 1 });
-            webview.sendInputEvent({ type: 'mouseUp', x: x, y: y, button: 'left', clickCount: 1 });
-        });
+    async pushTwitterButton(webview, button) {
+        const selector = 'nav[role="navigation"]';
+        const rect = await this.execJSInWebView(webview, `JSON.parse(JSON.stringify(document.querySelector('${selector}').getBoundingClientRect()));`);
+        const x = rect.width / 2;
+        const y = rect.top + rect.height / 18 * (1 + button * 2);
+        webview.sendInputEvent({ type: 'mouseDown', x: x, y: y, button: 'left', clickCount: 1 });
+        webview.sendInputEvent({ type: 'mouseUp', x: x, y: y, button: 'left', clickCount: 1 });
     }
     isTwitterURL(url) {
         return url.match(/^https+:\/\/[^\/]*\.twitter.com\//) !== null;
@@ -252,6 +254,70 @@ class Main {
     }
     urlMenu() {
         this.umenu.open();
+    }
+}
+const electron = require('electron');
+class MenuClass {
+    constructor() {
+        this.menu = new electron.remote.Menu();
+    }
+    addItem(label, click) {
+        this.menu.append(new electron.remote.MenuItem({ label: label, click: click }));
+    }
+    open() {
+        this.menu.popup({ window: electron.remote.getCurrentWindow() });
+    }
+}
+class InMenu extends MenuClass {
+    init(msg) {
+        this.addItem('Reload', () => { location.reload(); });
+        this.addItem('Devtool', () => { this.devtool(); });
+        this.menu.append(new electron.remote.MenuItem({ type: 'separator' }));
+        this.addItem('Exit', () => { msg.send('exit', {}); });
+    }
+    addItem(label, click) {
+        this.menu.append(new electron.remote.MenuItem({ label: label, click: click }));
+    }
+    devtool() {
+        document.getElementById('webview').openDevTools();
+    }
+}
+class UrlMenu extends MenuClass {
+    init(url) {
+        this.url = url;
+        this.addItem('Copy URL', () => { this.copyUrl(); });
+        this.addItem('Open URL', () => { this.openUrl(); });
+        url.addEventListener('mousedown', (e) => {
+            switch (e.button) {
+                case 1:
+                    break;
+                case 2:
+                    return this.open();
+            }
+        }, false);
+    }
+    copyUrl() {
+        electron.clipboard.writeText(this.url.value);
+    }
+    openUrl() {
+        electron.shell.openExternal(this.url.value);
+    }
+}
+class Message {
+    constructor() {
+        this.events = {};
+        electron.ipcRenderer.on('asynchronous-reply', (event, arg) => {
+            if (!this.events[arg.type]) {
+                return;
+            }
+            this.events[arg.type](event, arg.data);
+        });
+    }
+    set(type, func) {
+        this.events[type] = func;
+    }
+    send(type, data) {
+        electron.ipcRenderer.send('asynchronous-message', { type: type, data: data });
     }
 }
 const main = new Main();
@@ -303,69 +369,4 @@ function GetSelectedItem(id) {
         return '';
     }
     return selectedItem.value || '';
-}
-const electron = require('electron');
-class MenuClass {
-    constructor() {
-        this.menu = new electron.remote.Menu();
-    }
-    addItem(label, click) {
-        this.menu.append(new electron.remote.MenuItem({ label: label, click: click }));
-    }
-    open() {
-        this.menu.popup(electron.remote.getCurrentWindow());
-    }
-}
-class InMenu extends MenuClass {
-    init(msg) {
-        this.addItem('Reload', () => { location.reload(); });
-        this.addItem('Devtool', () => { this.devtool(); });
-        this.menu.append(new electron.remote.MenuItem({ type: 'separator' }));
-        this.addItem('Exit', () => { msg.send('exit', {}); });
-    }
-    addItem(label, click) {
-        this.menu.append(new electron.remote.MenuItem({ label: label, click: click }));
-    }
-    devtool() {
-        document.getElementById('webview').openDevTools();
-    }
-}
-class UrlMenu extends MenuClass {
-    init(url) {
-        this.url = url;
-        this.addItem('Copy URL', () => { this.copyUrl(); });
-        this.addItem('Open URL', () => { this.openUrl(); });
-        url.addEventListener('mousedown', (e) => {
-            switch (e.button) {
-                case 1:
-                    break;
-                case 2:
-                    return this.open();
-            }
-        }, false);
-    }
-    copyUrl() {
-        electron.clipboard.writeText(this.url.value);
-    }
-    openUrl() {
-        electron.shell.openExternal(this.url.value);
-    }
-}
-const IpcRenderer = require('electron').ipcRenderer;
-class Message {
-    constructor() {
-        this.events = {};
-        IpcRenderer.on('asynchronous-reply', (event, arg) => {
-            if (!this.events[arg.type]) {
-                return;
-            }
-            this.events[arg.type](event, arg.data);
-        });
-    }
-    set(type, func) {
-        this.events[type] = func;
-    }
-    send(type, data) {
-        IpcRenderer.send('asynchronous-message', { type: type, data: data });
-    }
 }

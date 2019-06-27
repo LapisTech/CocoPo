@@ -1,3 +1,5 @@
+import { WebviewTag } from "electron";
+
 class Main
 {
 	private msg: Message;
@@ -186,8 +188,16 @@ class Main
 
 	private initWebView()
 	{
+		/*setTimeout(() => {
+			webview.openDevTools();
+			webview.executeJavaScript( 'JSON.parse(JSON.stringify(document.querySelector(\'nav[role="navigation"]\').getBoundingClientRect()));', false, ( result ) =>
+			{
+				console.log( result );
+			} );
+			this.pushTwitterButton( webview, 1 );
+		}, 7000);*/
 
-		const webview = <HTMLElement>document.getElementById( 'webview' );
+		const webview = <WebviewTag>document.getElementById( 'webview' );
 		webview.addEventListener( 'new-window', ( e ) => { this.openURL( (<any>e).url ); });
 		webview.addEventListener( 'dom-ready', () =>
 		{
@@ -196,7 +206,6 @@ class Main
 			//webview.addEventListener( 'did-start-loading', ( e ) =>
 			webview.addEventListener( 'did-navigate-in-page', ( e ) =>
 			{
-//console.log('did-navigate-in-page',e);
 				const url = (<any>e).url;
 				if ( this.isTwitterURL( url ) )
 				{
@@ -248,7 +257,7 @@ class Main
 		} );
 	}
 
-	private initAutoUpdate( webview: Electron.webContents, time: number )//TODO: webview
+	private initAutoUpdate( webview: WebviewTag, time: number )//TODO: webview
 	{
 		if ( this.reloadtimer )
 		{
@@ -284,7 +293,7 @@ class Main
 		}, time * 1000 );
 	}
 
-	private execJSInWebView( webview: Electron.webContents, code: string ): Promise<any>
+	private execJSInWebView( webview: WebviewTag, code: string ): Promise<any>
 	{
 		return new Promise( ( resolve, reject ) =>
 		{
@@ -295,7 +304,7 @@ class Main
 		} );
 	}
 
-	private initScroll( webview: Electron.webContents )
+	private initScroll( webview: WebviewTag )
 	{
 		this.execJSInWebView( webview, 'typeof CocoPo;' ).then( ( type ) =>
 		{
@@ -307,7 +316,7 @@ class Main
 		} );
 	}
 
-	private getScroll( webview: Electron.webContents )
+	private getScroll( webview: WebviewTag )
 	{
 		return this.execJSInWebView( webview, 'document.body.scrollTop;' ).then( ( scroll ) =>
 		{
@@ -317,7 +326,7 @@ class Main
 		} );
 	}
 
-	private checkScroll( webview: Electron.webContents ): Promise<boolean>
+	private checkScroll( webview: WebviewTag ): Promise<boolean>
 	{
 		return this.execJSInWebView( webview, 'CocoPo.scroll;' ).then( ( scroll ) =>
 		{
@@ -325,20 +334,19 @@ class Main
 		} );
 	}
 
-	private resetScroll( webview: Electron.webContents )
+	private resetScroll( webview: WebviewTag )
 	{
 		return this.execJSInWebView( webview, 'CocoPo.scroll=false;CocoPo.scroll;' );
 	}
 
-	private pushTwitterButton( webview: Electron.webContents, button: number )
+	private async pushTwitterButton( webview: WebviewTag, button: number )
 	{
-		return this.execJSInWebView( webview, 'document.querySelector("header").clientHeight;' ).then( ( height ) =>
-		{
-			const x = (<any>webview).clientWidth / 8 * ( button * 2 + 1 );
-			const y = height / 3 * 2;
-			webview.sendInputEvent( <any>{ type: 'mouseDown', x: x, y: y, button:'left', clickCount: 1 } );
-			webview.sendInputEvent( <any>{ type: 'mouseUp', x: x, y: y, button:'left', clickCount: 1 } );
-		} );
+		const selector = 'nav[role="navigation"]';
+		const rect: { top: number, left: number, width: number, height: number } = await this.execJSInWebView( webview, `JSON.parse(JSON.stringify(document.querySelector('${selector}').getBoundingClientRect()));` );
+		const x = rect.width / 2;
+		const y = rect.top + rect.height / 18 * ( 1 + button * 2 );
+		webview.sendInputEvent( <any>{ type: 'mouseDown', x: x, y: y, button:'left', clickCount: 1 } );
+		webview.sendInputEvent( <any>{ type: 'mouseUp', x: x, y: y, button:'left', clickCount: 1 } );
 	}
 
 	private isTwitterURL( url: string )
@@ -369,6 +377,109 @@ class Main
 	public urlMenu()
 	{
 		this.umenu.open();
+	}
+}
+
+const electron = require( 'electron' );
+
+class MenuClass
+{
+	protected menu: Electron.Menu;
+
+	constructor()
+	{
+		this.menu = new electron.remote.Menu();
+	}
+
+	public addItem( label: string, click: () => void )
+	{
+		this.menu.append( new electron.remote.MenuItem( { label: label, click: click } ) );
+	}
+
+	public open()
+	{
+		this.menu.popup( { window: electron.remote.getCurrentWindow() } );
+	}
+}
+
+class InMenu extends MenuClass
+{
+	public init( msg: Message )
+	{
+		this.addItem( 'Reload', () => { location.reload(); } );
+		this.addItem( 'Devtool', () => { this.devtool(); } );
+		this.menu.append( new electron.remote.MenuItem( { type: 'separator' } ) );
+		this.addItem( 'Exit', () => { msg.send( 'exit', {} ); } );
+	}
+
+	public addItem( label: string, click: () => void )
+	{
+		this.menu.append( new electron.remote.MenuItem( { label: label, click: click } ) );
+	}
+
+	public devtool()
+	{
+		(<Electron.WebviewTag>document.getElementById('webview')).openDevTools();
+	}
+}
+
+class UrlMenu extends MenuClass
+{
+	private url: HTMLInputElement;
+
+	public init( url: HTMLInputElement )
+	{
+		this.url = url;
+		this.addItem( 'Copy URL', () => { this.copyUrl(); } );
+		this.addItem( 'Open URL', () => { this.openUrl(); } );
+
+		url.addEventListener( 'mousedown', ( e ) =>
+		{
+			switch ( e.button )
+			{
+				//case 0: // Left
+				case 1: // Middle
+					break;
+				case 2: // Right
+					return this.open();
+			}
+		}, false );
+	}
+
+	public copyUrl()
+	{
+		//this.menu.popup( electron.remote.getCurrentWindow() );
+		electron.clipboard.writeText( this.url.value );
+	}
+
+	public openUrl()
+	{
+		electron.shell.openExternal( this.url.value );
+	}
+}
+
+class Message
+{
+	private events: { [ keys: string ]: ( event: Electron.IpcMessageEvent, arg: any ) => void };
+
+	constructor()
+	{
+		this.events = {};
+		electron.ipcRenderer.on( 'asynchronous-reply', ( event: Electron.IpcMessageEvent, arg: { type: string, data: any } ) =>
+		{
+			if ( !this.events[ arg.type ] ) { return; }
+			this.events[ arg.type ]( event, arg.data );
+		} );
+	}
+
+	public set( type: string, func: ( event: Electron.IpcMessageEvent, arg: any ) => void )
+	{
+		this.events[ type ] = func;
+	}
+
+	public send( type: string, data: any )
+	{
+		electron.ipcRenderer.send( 'asynchronous-message', { type: type, data: data } );
 	}
 }
 

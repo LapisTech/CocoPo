@@ -12,6 +12,8 @@ interface DownloadThemeData extends ThemeData
 class ThemeManager
 {
 	private style: string = `
+header[role="banner"] > div { width: 20px; }
+header[role="banner"] > div > div > div { width: 20px; padding: 0; }
 @media screen and (max-width: 300px) {
 	html {
 		font-size: 10px !important;
