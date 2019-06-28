@@ -189,7 +189,7 @@ class Main {
                         }
                         this.pushTwitterButton(webview, 0);
                     });
-                }, 3000);
+                }, 5000);
             });
         }, time * 1000);
     }

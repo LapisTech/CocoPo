@@ -288,7 +288,7 @@ class Main
 						if ( this.url.value !== 'https://mobile.twitter.com/home' || sclolled ) { return; }
 						this.pushTwitterButton( webview, 0 );
 					} );
-				}, 3000 );
+				}, 5000 );
 			} );
 		}, time * 1000 );
 	}
